@@ -4,7 +4,7 @@ import '../models/user.dart';
 import '../utils/hash.dart';
 
 class ApiService {
-  static const String baseUrl = 'https://686cd64914219674dcc94e03.mockapi.io/api/testV1/users'; 
+  static const String baseUrl = 'https://686cd64914219674dcc94e03.mockapi.io/api/testV1/'; 
 
   static Future<User?> login(String email, String password) async {
     final hash = hashPassword(password);
