@@ -1,4 +1,4 @@
-namespace AspNetCoreWebApiWithRolesBasedAuthorization.Models
+namespace WebApiWithRoleAuthentication.Models
 {
     public class ChangeRole
     {
