@@ -27,22 +27,43 @@ namespace WebApiWithRoleAuthentication.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] Register model)
         {
-            var user = new IdentityUser { UserName = model.Username, Email = model.Email };
+
+            if(!isValidEmail(model.Email))
+            {
+                return BadRequest(new { message = "Invalid email format" });
+            
+            }
+            var existingUser = await _userManager.FindByEmailAsync(model.Email);
+            if(existingUser != null)
+            {
+                return BadRequest(new { message = "User already exists" });
+            }
+
+            var user = new IdentityUser { UserName = model.Email, Email = model.Email };
             var result = await _userManager.CreateAsync(user, model.Password);
 
             if (result.Succeeded)
             {
-                //await _userManager.AddToRoleAsync(user, "User");
+                if(!await _roleManager.RoleExistsAsync("User"))
+                {
+                    var roleResult = await _roleManager.CreateAsync(new IdentityRole("User"));
+                    if(!roleResult.Succeeded)
+                    {
+                        await _userManager.DeleteAsync(user);
+                        return StatusCode(500, new { message = "Role creation failed", errors= roleResult.Errors });
+                    }
+                }
+                await _userManager.AddToRoleAsync(user, "User");
                 return Ok(new { message = "User registered successfully" });
             }
-
-            return BadRequest(result.Errors);
+            var errors = result.Errors.Select(e => e.Description);
+            return BadRequest(new { message = "Registration Failed.", errors });
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] Login model)
         {
-            var user = await _userManager.FindByNameAsync(model.Username);
+            var user = await _userManager.FindByNameAsync(model.Email);
             if (user != null && await _userManager.CheckPasswordAsync(user, model.Password))
             {
                 var userRoles = await _userManager.GetRolesAsync(user);
@@ -68,39 +89,19 @@ namespace WebApiWithRoleAuthentication.Controllers
             return Unauthorized();
         }
 
-        [HttpPost("add-role")]
-        public async Task<IActionResult> AddRole([FromBody] string role)
+        
+        private bool isValidEmail(string email)
         {
-            if (!await _roleManager.RoleExistsAsync(role))
+            try
             {
-                var result = await _roleManager.CreateAsync(new IdentityRole(role));
-                if (result.Succeeded)
-                {
-                    return Ok(new { message = "Role added successfully" });
-                }
-
-                return BadRequest(result.Errors);
+                var addr = new System.Net.Mail.MailAddress(email);
+                return addr.Address == email;
             }
-
-            return BadRequest("Role already exists");
+            catch
+            {
+                return false;
+            }
         }
-
-        [HttpPost("assign-role")]
-        public async Task<IActionResult> AssignRole([FromBody] UserRole model)
-        {
-            var user = await _userManager.FindByNameAsync(model.Username);
-            if (user == null)
-            {
-                return BadRequest("User not found");
-            }
-
-            var result = await _userManager.AddToRoleAsync(user, model.Role);
-            if (result.Succeeded)
-            {
-                return Ok(new { message = "Role assigned successfully" });
-            }
-
-            return BadRequest(result.Errors);
-        }
+        
     }
 }
