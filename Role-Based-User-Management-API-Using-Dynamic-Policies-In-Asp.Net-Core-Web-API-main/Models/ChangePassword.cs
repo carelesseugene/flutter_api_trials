@@ -1,4 +1,4 @@
-namespace WebApiWithRoleAuthentication.Models
+﻿namespace WebApiWithRoleAuthentication.Models
 {
     public class ChangePassword
     {

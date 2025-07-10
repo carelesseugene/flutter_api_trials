@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -27,35 +27,37 @@ namespace WebApiWithRoleAuthentication.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] Register model)
         {
-
-            if(!isValidEmail(model.Email))
+            if (!isValidEmail(model.Email))
             {
-                return BadRequest(new { message = "Invalid email format" });
-            
+                return BadRequest(new { message = "Invalid email format." });
             }
             var existingUser = await _userManager.FindByEmailAsync(model.Email);
-            if(existingUser != null)
+            if (existingUser != null)
             {
-                return BadRequest(new { message = "User already exists" });
+                return BadRequest(new { message = "Email already exists." });
             }
 
-            var user = new IdentityUser { UserName = model.Email, Email = model.Email };
+            var user = new IdentityUser { UserName = model.Email, Email = model.Email, PhoneNumber = model.phoneNumber };
+
             var result = await _userManager.CreateAsync(user, model.Password);
 
             if (result.Succeeded)
             {
-                if(!await _roleManager.RoleExistsAsync("User"))
+                if (!await _roleManager.RoleExistsAsync("User"))
                 {
                     var roleResult = await _roleManager.CreateAsync(new IdentityRole("User"));
-                    if(!roleResult.Succeeded)
+                    if (!roleResult.Succeeded)
                     {
                         await _userManager.DeleteAsync(user);
-                        return StatusCode(500, new { message = "Role creation failed", errors= roleResult.Errors });
+                        return StatusCode(500, new { message = "User role creation failed.", errors = roleResult.Errors });
                     }
                 }
+
                 await _userManager.AddToRoleAsync(user, "User");
+
                 return Ok(new { message = "User registered successfully" });
             }
+
             var errors = result.Errors.Select(e => e.Description);
             return BadRequest(new { message = "Registration Failed.", errors });
         }
@@ -91,19 +93,17 @@ namespace WebApiWithRoleAuthentication.Controllers
             return Unauthorized();
         }
 
-        
         private bool isValidEmail(string email)
         {
             try
             {
-                var addr = new System.Net.Mail.MailAddress(email);
-                return addr.Address == email;
+                var address = new System.Net.Mail.MailAddress(email);
+                return address.Address == email;
             }
             catch
             {
                 return false;
             }
         }
-        
     }
 }
