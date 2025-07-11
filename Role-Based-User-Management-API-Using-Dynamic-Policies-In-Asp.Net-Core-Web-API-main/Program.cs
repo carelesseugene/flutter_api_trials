@@ -9,6 +9,8 @@ using WebApiWithRoleAuthentication.Authorization;
 using WebApiWithRoleAuthentication.Data;
 using WebApiWithRoleAuthentication.Models;
 
+const string AllowAll = "AllowAll"; 
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -65,10 +67,15 @@ builder.Services.AddSingleton<IAuthorizationHandler, DynamicRoleHanlder>();
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(AllowAll, p => p
+        .AllowAnyOrigin()
+        .AllowAnyMethod()
+        .AllowAnyHeader());
+});
 
 var app = builder.Build();
-builder.Services.AddCors(o => o.AddPolicy("AllowAll",p => p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
-app.UseCors("AllowAll");
 
 
 // Configure the HTTP request pipeline.

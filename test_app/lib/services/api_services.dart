@@ -6,7 +6,7 @@ import '../models/user.dart';
 
 class ApiService {
   /// Change only this line if your API is on another port / host.
-  static const String _base = 'http://local:5129/api';
+  static const _base = 'http://192.168.192.182:5129/api';
 
   static Future<SharedPreferences> _prefs() => SharedPreferences.getInstance();
 
