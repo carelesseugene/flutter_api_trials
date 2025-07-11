@@ -5,12 +5,11 @@ import 'package:jwt_decoder/jwt_decoder.dart';
 import '../models/user.dart';
 
 class ApiService {
-  /// Change only this line if your API is on another port / host.
-  static const _base = 'http://192.168.192.182:5129/api';
+
+  static const _base = '<ip address>/api';
 
   static Future<SharedPreferences> _prefs() => SharedPreferences.getInstance();
 
-  /* ───────── AUTH ───────── */
 
   static Future<bool> login(String email, String password) async {
     final res = await http.post(
