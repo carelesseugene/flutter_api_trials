@@ -18,6 +18,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Program.cs
 builder.Services.AddDbContext<AppDbContext>(options =>
 options.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
 
@@ -66,6 +67,9 @@ builder.Logging.AddConsole();
 
 
 var app = builder.Build();
+builder.Services.AddCors(o => o.AddPolicy("AllowAll",p => p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
+app.UseCors("AllowAll");
+
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -75,6 +79,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors(AllowAll);
 
 app.UseAuthentication();
 
