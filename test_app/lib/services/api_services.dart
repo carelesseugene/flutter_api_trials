@@ -6,7 +6,7 @@ import '../models/user.dart';
 
 class ApiService {
 
-  static const _base = '<ip address>/api';
+  static const _base = '<ip-addresss>/api';
 
   static Future<SharedPreferences> _prefs() => SharedPreferences.getInstance();
 

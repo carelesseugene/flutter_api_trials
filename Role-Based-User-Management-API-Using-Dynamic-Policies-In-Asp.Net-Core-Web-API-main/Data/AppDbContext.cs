@@ -7,6 +7,10 @@ namespace WebApiWithRoleAuthentication.Data
 {
     public class AppDbContext : IdentityDbContext<IdentityUser>
     {
+        public DbSet<Project> Projects => Set<Project>();
+        public DbSet<ProjectMember> ProjectMembers => Set<ProjectMember>();
+        public DbSet<BoardColumn> BoardColumns => Set<BoardColumn>();
+
         public AppDbContext(DbContextOptions options) : base(options)
         {
         }
@@ -15,13 +19,28 @@ namespace WebApiWithRoleAuthentication.Data
         {
             base.OnModelCreating(builder);
 
-            //Seed Roles
-            builder.Entity<IdentityRole>().HasData(
-                new IdentityRole { Id = "1", Name = "Admin", NormalizedName = "ADMIN"},
-                new IdentityRole { Id = "2", Name = "User", NormalizedName = "USER" }
-                );
+            builder.Entity<ProjectMember>().HasKey(pm => new { pm.ProjectId, pm.UserId });
 
-            //Seed Admin Data
+            builder.Entity<Project>()
+                .HasMany(p => p.Members)
+                .WithOne(m => m.Project)
+                .HasForeignKey(m => m.ProjectId);
+
+            builder.Entity<Project>()
+                .HasMany(p => p.Columns)
+                .WithOne(c => c.Project)
+                .HasForeignKey(c => c.ProjectId);
+
+            builder.Entity<BoardColumn>()
+                .HasIndex(c => new { c.ProjectId, c.Position })
+                .IsUnique();
+
+            builder.Entity<IdentityRole>().HasData(
+                new IdentityRole { Id = "1", Name = "Admin", NormalizedName = "ADMIN" },
+                new IdentityRole { Id = "2", Name = "User", NormalizedName = "USER" }
+            );
+
+            // Seed Admin Data
             var hasher = new PasswordHasher<IdentityUser>();
             var adminUser = new IdentityUser
             {
@@ -39,14 +58,14 @@ namespace WebApiWithRoleAuthentication.Data
 
             builder.Entity<IdentityUser>().HasData(adminUser);
 
-            //Assign Role To Admin
+            // Assign Role To Admin
             builder.Entity<IdentityUserRole<string>>().HasData(
                 new IdentityUserRole<string>
                 {
                     RoleId = "1",
                     UserId = adminUser.Id
                 }
-                );
+            );
         }
     }
 }
