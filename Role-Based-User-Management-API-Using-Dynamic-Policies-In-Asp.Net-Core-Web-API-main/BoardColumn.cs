@@ -1,5 +1,5 @@
 using System;
-
+namespace ProjectManagement.Domain;
 public class BoardColumn
 {
     public Guid Id        { get; set; } = Guid.NewGuid();

@@ -3,10 +3,66 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import '../models/user.dart';
+import '../models/project.dart';
 
 class ApiService {
 
-  static const _base = '<ip-addresss>/api';
+//PROJECT METHODS START
+  static Future<List<ProjectSummary>> listProjects() async {
+  final res = await _get('projects');          
+  if (res.statusCode != 200) throw Exception(res.body);
+  return (jsonDecode(res.body) as List)
+      .map((e) => ProjectSummary.fromJson(e))
+      .toList();
+}
+
+static Future<ProjectSummary?> createProject(
+    String name, String? description) async {
+  final res = await _post('projects', body: {
+    'name': name,
+    'description': description,
+  });
+  return res.statusCode == 201
+      ? ProjectSummary.fromJson(jsonDecode(res.body))
+      : null;
+}
+static Future<void> deleteProject(String id) async =>
+    _delete('projects/$id');
+
+//PROJECT METHODS END
+//HELPER METHODS START
+ static Future<String?> _getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('token');
+  }
+static Future<http.Response> _get(String path) async {
+    final token = await _getToken();
+    final url = Uri.parse('$_base/$path');
+    return http.get(url, headers: {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    });
+  }
+  static Future<http.Response> _post(String path, {Map<String, dynamic>? body}) async {
+    final token = await _getToken();
+    final url = Uri.parse('$_base/$path');
+    return http.post(url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(body ?? {}));
+  }
+  static Future<http.Response> _delete(String path) async {
+    final token = await _getToken();
+    final url = Uri.parse('$_base/$path');
+    return http.delete(url, headers: {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    });
+  }
+//HELPER METHODS END
+  static const _base = 'http://10.0.2.2:5129/api';
 
   static Future<SharedPreferences> _prefs() => SharedPreferences.getInstance();
 

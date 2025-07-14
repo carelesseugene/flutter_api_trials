@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/api_services.dart';
 import '../models/user.dart';
-import 'profile_page.dart';
+//import 'profile_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -22,10 +22,7 @@ class _LoginPageState extends State<LoginPage> {
     if (ok) {
       final user = await ApiService.getProfile();
       if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => ProfilePage(user: user!)),
-      );
+      Navigator.pushReplacementNamed(context, '/projects');
     } else {
       setState(() => error = 'Wrong e-mail / password');
     }

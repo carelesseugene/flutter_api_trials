@@ -64,34 +64,45 @@ namespace WebApiWithRoleAuthentication.Controllers
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] Login model)
-        {
-            var user = await _userManager.FindByNameAsync(model.Email);
-            if (user != null && await _userManager.CheckPasswordAsync(user, model.Password))
-            {
-                var userRoles = await _userManager.GetRolesAsync(user);
-
-                var authClaims = new List<Claim>
-                {
-                    new Claim(JwtRegisteredClaimNames.Name, user.UserName!),
-                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                    new Claim(JwtRegisteredClaimNames.Email, user.Email!),
-                    new Claim("userId", user.Id)
-                };
-
-                authClaims.AddRange(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
-
-                var token = new JwtSecurityToken(
-                    issuer: _configuration["Jwt:Issuer"],
-                    expires: DateTime.Now.AddMinutes(double.Parse(_configuration["Jwt:ExpiryMinutes"]!)),
-                    claims: authClaims,
-                    signingCredentials: new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!)),
-                    SecurityAlgorithms.HmacSha256));
-
-                return Ok(new { token = new JwtSecurityTokenHandler().WriteToken(token) });
-            }
-
+{
+        // 1. find user & validate password
+        var user = await _userManager.FindByNameAsync(model.Email);
+        if (user == null || !await _userManager.CheckPasswordAsync(user, model.Password))
             return Unauthorized();
-        }
+
+        // 2. roles
+        var roles = await _userManager.GetRolesAsync(user);
+
+        // 3. build claims  ───────────────────────────────────────────────
+        var claims = new List<Claim>
+        {
+            // **critical**: NameIdentifier → user.Id
+            new(ClaimTypes.NameIdentifier, user.Id),
+
+            // (the others you already had)
+            new(JwtRegisteredClaimNames.Name,  user.UserName!),
+            new(JwtRegisteredClaimNames.Jti,   Guid.NewGuid().ToString()),
+            new(JwtRegisteredClaimNames.Email, user.Email!)
+        };
+
+        // add role claims
+        claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
+
+        // 4. create token
+        var key     = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
+        var creds   = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        var expires = DateTime.UtcNow.AddMinutes(double.Parse(_configuration["Jwt:ExpiryMinutes"]!));
+
+        var token = new JwtSecurityToken(
+            issuer:  _configuration["Jwt:Issuer"],
+            audience: null,                 // audience validation disabled in TokenValidationParameters
+            claims:  claims,
+            expires: expires,
+            signingCredentials: creds);
+
+        // 5. return JWT
+        return Ok(new { token = new JwtSecurityTokenHandler().WriteToken(token) });
+}
 
         private bool isValidEmail(string email)
         {
