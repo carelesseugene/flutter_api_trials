@@ -1,5 +1,5 @@
-using System;
-namespace ProjectManagement.Domain;
+using ProjectManagement.Domain;
+
 public class BoardColumn
 {
     public Guid Id        { get; set; } = Guid.NewGuid();
@@ -8,4 +8,6 @@ public class BoardColumn
 
     public string Title   { get; set; } = default!;
     public int    Position{ get; set; }
+
+    public ICollection<TaskCard> Cards { get; set; } = new List<TaskCard>();
 }

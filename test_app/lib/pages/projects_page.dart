@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/project_provider.dart';
 import '../services/api_services.dart';
 import '../pages/login_page.dart';
+import '../pages/board_page.dart';
 class ProjectsPage extends ConsumerWidget {
   const ProjectsPage({super.key});
 
@@ -34,9 +35,15 @@ class ProjectsPage extends ConsumerWidget {
           separatorBuilder: (_, __) => const Divider(height: 1),
           itemBuilder: (_, i) => ListTile(
             title: Text(list[i].name),
-            onTap: () {
-              // TODO: push BoardPage in future milestones
-            },
+            onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BoardPage(
+                projectId: list[i].id,
+                projectName: list[i].name,
+              ),
+            ),
+          ),
             trailing: IconButton(
               icon: const Icon(Icons.delete),
               onPressed: () async {

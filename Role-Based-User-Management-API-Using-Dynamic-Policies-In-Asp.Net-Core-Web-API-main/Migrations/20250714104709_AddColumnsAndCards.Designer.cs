@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using WebApiWithRoleAuthentication.Data;
 
@@ -11,9 +12,11 @@ using WebApiWithRoleAuthentication.Data;
 namespace WebApiWithRoleAuthentication.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250714104709_AddColumnsAndCards")]
+    partial class AddColumnsAndCards
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -179,18 +182,18 @@ namespace WebApiWithRoleAuthentication.Migrations
                     b.HasData(
                         new
                         {
-                            Id = "4e8b23b8-5b0b-4ab2-8409-3d842b07a472",
+                            Id = "6d557da8-ad1c-4bdd-a774-206acfd823c2",
                             AccessFailedCount = 0,
-                            ConcurrencyStamp = "54d581cb-c65a-401b-b63a-bba6c0613f06",
+                            ConcurrencyStamp = "6582c1eb-cbb5-400b-b780-35e6901ae2ac",
                             Email = "freetrained@freetrained.com",
                             EmailConfirmed = true,
                             LockoutEnabled = false,
                             NormalizedEmail = "FREETRAINED@FREETRAINED.COM",
                             NormalizedUserName = "FREETRAINED@FREETRAINED.COM",
-                            PasswordHash = "AQAAAAIAAYagAAAAEOknU+KJBH3EQD+vGTSrgHJljI2rBnepDbPXb7Kx1pW72j/vGCZNHYI8bIyjrc/8hg==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEDu4qRapg3K6mVzgtTWm7VVDQf11CCdKUCl2TKfyzsDIo7FPSXIOUKv58EaY5DdhYA==",
                             PhoneNumber = "1234567890",
                             PhoneNumberConfirmed = true,
-                            SecurityStamp = "b3c75245-3daf-4a03-ae18-13a8766c1ce6",
+                            SecurityStamp = "68e6dead-2863-46a4-8b14-fad60c1780e8",
                             TwoFactorEnabled = false,
                             UserName = "freetrained@freetrained.com"
                         });
@@ -260,7 +263,7 @@ namespace WebApiWithRoleAuthentication.Migrations
                     b.HasData(
                         new
                         {
-                            UserId = "4e8b23b8-5b0b-4ab2-8409-3d842b07a472",
+                            UserId = "6d557da8-ad1c-4bdd-a774-206acfd823c2",
                             RoleId = "1"
                         });
                 });
@@ -323,7 +326,7 @@ namespace WebApiWithRoleAuthentication.Migrations
                     b.ToTable("ProjectMembers");
                 });
 
-            modelBuilder.Entity("ProjectManagement.Domain.TaskCard", b =>
+            modelBuilder.Entity("TaskCard", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -358,7 +361,7 @@ namespace WebApiWithRoleAuthentication.Migrations
                     b.HasIndex("ColumnId", "Position")
                         .IsUnique();
 
-                    b.ToTable("TaskCards");
+                    b.ToTable("TaskCard");
                 });
 
             modelBuilder.Entity("BoardColumn", b =>
@@ -442,7 +445,7 @@ namespace WebApiWithRoleAuthentication.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("ProjectManagement.Domain.TaskCard", b =>
+            modelBuilder.Entity("TaskCard", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "AssignedUser")
                         .WithMany()

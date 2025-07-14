@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import '../models/user.dart';
 import '../models/project.dart';
+import '../models/board.dart';
 
 class ApiService {
 
@@ -147,4 +148,64 @@ static Future<void> logout() async {
     );
     return res.statusCode == 200;
   }
+
+//BOARD METHODS START
+static Future<List<BoardColumn>> getBoard(String projectId) async {
+  final res = await _get('projects/$projectId');   // GET details
+  if (res.statusCode != 200) throw Exception(res.body);
+
+  final body = jsonDecode(res.body);
+  return (body['columns'] as List)
+      .map((e) => BoardColumn.fromJson(e))
+      .toList()
+        ..sort((a, b) => a.position.compareTo(b.position));
+}
+
+static Future<BoardColumn> addColumn(String projectId, String title) async {
+  final res = await _post('projects/$projectId/columns',
+      body: {'title': title});
+  if (res.statusCode != 201) throw Exception(res.body);
+  return BoardColumn.fromJson(jsonDecode(res.body));
+}
+
+static Future<TaskCard> addCard(
+    String projectId, String columnId, String title) async {
+  final res = await _post(
+      'projects/$projectId/columns/$columnId/cards',
+      body: {'title': title});
+  if (res.statusCode != 201) throw Exception(res.body);
+  return TaskCard.fromJson(jsonDecode(res.body));
+}
+
+static Future<void> moveCard({
+  required String projectId,
+  required String cardId,
+  required String targetColumnId,
+  required int newPosition,
+}) async {
+  final res = await _patch(
+    'projects/$projectId/cards/$cardId/move',
+    body: {
+      'targetColumnId': targetColumnId,
+      'newPosition': newPosition,
+    },
+  );
+  if (res.statusCode != 204) throw Exception(res.body);
+}
+
+/* helper for PATCH */
+static Future<http.Response> _patch(String path,
+    {Map<String, dynamic>? body}) async {
+  final token = await _getToken();
+  final url = Uri.parse('$_base/$path');
+  return http.patch(url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(body ?? {}));
+}
+//BOARD METHODS END
+
+
 }

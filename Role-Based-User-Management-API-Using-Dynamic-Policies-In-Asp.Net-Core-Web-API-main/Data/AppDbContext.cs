@@ -10,6 +10,7 @@ namespace WebApiWithRoleAuthentication.Data
         public DbSet<Project> Projects => Set<Project>();
         public DbSet<ProjectMember> ProjectMembers => Set<ProjectMember>();
         public DbSet<BoardColumn> BoardColumns => Set<BoardColumn>();
+        public DbSet<TaskCard>     TaskCards      => Set<TaskCard>();
 
         public AppDbContext(DbContextOptions options) : base(options)
         {
@@ -34,7 +35,9 @@ namespace WebApiWithRoleAuthentication.Data
             builder.Entity<BoardColumn>()
                 .HasIndex(c => new { c.ProjectId, c.Position })
                 .IsUnique();
-
+            builder.Entity<TaskCard>()
+                .HasIndex(c => new { c.ColumnId, c.Position })
+                .IsUnique();
             builder.Entity<IdentityRole>().HasData(
                 new IdentityRole { Id = "1", Name = "Admin", NormalizedName = "ADMIN" },
                 new IdentityRole { Id = "2", Name = "User", NormalizedName = "USER" }
