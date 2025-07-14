@@ -7,6 +7,8 @@ import '../models/project.dart';
 
 class ApiService {
 
+  static const _base = 'http://10.0.2.2:5129/api';
+
 //PROJECT METHODS START
   static Future<List<ProjectSummary>> listProjects() async {
   final res = await _get('projects');          
@@ -62,10 +64,11 @@ static Future<http.Response> _get(String path) async {
     });
   }
 //HELPER METHODS END
-  static const _base = 'http://10.0.2.2:5129/api';
+  
 
   static Future<SharedPreferences> _prefs() => SharedPreferences.getInstance();
-
+ 
+ //AUTH METHODS START
 
   static Future<bool> login(String email, String password) async {
     final res = await http.post(
@@ -102,8 +105,10 @@ static Future<http.Response> _get(String path) async {
     return false;
   }
 
-  static Future<void> logout() async =>
-      (await _prefs()).remove('token');
+static Future<void> logout() async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.remove('token');
+}
 
   /* ───────── PROTECTED ───────── */
 
@@ -125,6 +130,7 @@ static Future<http.Response> _get(String path) async {
 
     return res.statusCode == 200 ? User.fromJson(jsonDecode(res.body)) : null;
   }
+  //AUTH METHODS END
 
   static Future<bool> updateProfile(
       {required String email, required String phone}) async {
