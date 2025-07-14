@@ -1,4 +1,4 @@
 public enum ProjectRole { 
-    Lead=0;
+    Lead=0,
 
-    Member=1; }
+    Member=1 }

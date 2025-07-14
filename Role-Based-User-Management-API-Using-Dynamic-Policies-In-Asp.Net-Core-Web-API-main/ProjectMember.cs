@@ -1,7 +1,8 @@
 using System;
 using Microsoft.AspNetCore.Identity;
 
-namespace YourProject.Domain;
+namespace ProjectManagement.Domain;
+
 
 public class ProjectMember
 {
