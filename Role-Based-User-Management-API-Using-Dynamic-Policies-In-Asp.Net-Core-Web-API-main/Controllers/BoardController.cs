@@ -96,11 +96,11 @@ public class BoardController : ControllerBase
         _db.TaskCards.Add(card);
         await _db.SaveChangesAsync();
         await _events.CardCreated(projectId, new CardDto(
-            card.Id, card.Title, card.Description,
+            card.Id,card.ColumnId, card.Title, card.Description,
             card.AssignedUserId, card.Position, card.DueUtc));
 
         return Created("", new CardDto(
-            card.Id, card.Title, card.Description,
+            card.Id,card.ColumnId, card.Title, card.Description,
             card.AssignedUserId, card.Position, card.DueUtc));
     }
 
@@ -132,7 +132,7 @@ public class BoardController : ControllerBase
 
         await _db.SaveChangesAsync();
         await _events.CardMoved(projectId, new CardDto(
-            card.Id, card.Title, card.Description,
+            card.Id,card.ColumnId, card.Title, card.Description,
             card.AssignedUserId, card.Position, card.DueUtc));
         return NoContent();
     }
@@ -160,6 +160,7 @@ public class BoardController : ControllerBase
                 .OrderBy(card => card.Position)
                 .Select(card => new CardDto(
                     card.Id,
+                    card.ColumnId,
                     card.Title,
                     card.Description,
                     card.AssignedUserId,

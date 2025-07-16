@@ -9,6 +9,7 @@ public record CreateCardDto(string Title, string? Description);
 public record MoveCardDto(Guid TargetColumnId, int NewPosition);
 public record CardDto(
     Guid Id,
+    Guid ColumnId,
     string Title,
     string? Description,
     string? AssignedUserId,

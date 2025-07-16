@@ -1,15 +1,16 @@
+
 class TaskCard {
   final String id;
+  final String columnId;              // column FK (needed for realtime)
   final String title;
-  final String columnId;
   final String? description;
   final String? assignedUserId;
-  int position;
+  int position;                       // mutable for drag
 
   TaskCard({
     required this.id,
-    required this.title,
     required this.columnId,
+    required this.title,
     this.description,
     this.assignedUserId,
     required this.position,
@@ -17,19 +18,28 @@ class TaskCard {
 
   factory TaskCard.fromJson(Map<String, dynamic> j) => TaskCard(
         id: j['id'],
-        columnId: j['columnId'],
+        columnId: j['columnId'],      // <- JSON must contain this
         title: j['title'],
         description: j['description'],
         assignedUserId: j['assignedUserId'],
         position: j['position'],
       );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'columnId': columnId,
+        'title': title,
+        'description': description,
+        'assignedUserId': assignedUserId,
+        'position': position,
+      };
 }
 
 class BoardColumn {
   final String id;
   final String title;
   int position;
-  List<TaskCard> cards;
+  List<TaskCard> cards;               // generic List<TaskCard>
 
   BoardColumn({
     required this.id,
@@ -39,17 +49,16 @@ class BoardColumn {
   });
 
   factory BoardColumn.fromJson(Map<String, dynamic> j) => BoardColumn(
-  id: j['id'],
-  title: j['title'],
-  position: j['position'],
-  // if "cards" key is absent or null → use empty list
-  cards: (j['cards'] as List? ?? [])
-      .map((e) => TaskCard.fromJson(e))
-      .toList()
-        ..sort((a, b) => a.position.compareTo(b.position)),
-);
+        id: j['id'],
+        title: j['title'],
+        position: j['position'],
+        cards: (j['cards'] as List? ?? [])
+            .map((e) => TaskCard.fromJson(e))
+            .toList()
+              ..sort((a, b) => a.position.compareTo(b.position)),
+      );
 
-BoardColumn copyWith({
+  BoardColumn copyWith({
     List<TaskCard>? cards,
     String? title,
     int? position,
@@ -60,5 +69,4 @@ BoardColumn copyWith({
         position: position ?? this.position,
         cards: cards ?? this.cards,
       );
-
 }
