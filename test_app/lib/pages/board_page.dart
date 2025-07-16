@@ -73,8 +73,6 @@ class _BoardPageState extends ConsumerState<BoardPage> {
   }
 }
 
-/* ----- single column widget ----- */
-
 class _ColumnWidget extends StatefulWidget {
   final BoardColumn column;
   final String projectId;
@@ -89,72 +87,135 @@ class _ColumnWidget extends StatefulWidget {
 class _ColumnWidgetState extends State<_ColumnWidget> {
   late List<TaskCard> _cards;
 
-  @override
-  void initState() {
-    super.initState();
-    _cards = [...widget.column.cards];
+ @override
+void initState() {
+  super.initState();
+  _cards = [...widget.column.cards]; // local copy
+}
+
+@override
+void didUpdateWidget(covariant _ColumnWidget oldWidget) {
+  super.didUpdateWidget(oldWidget);
+  // Sync local list if provider sent new data
+  if (oldWidget.column.cards != widget.column.cards) {
+    setState(() {
+      _cards = [...widget.column.cards];
+    });
   }
+}
 
-  @override
-  Widget build(BuildContext context) {
-    final width = 260.0;
-    return Container(
-      width: width,
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceVariant,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          Text(widget.column.title,
-              style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Expanded(
-            child: ReorderableListView.builder(
-              itemCount: _cards.length,
-              onReorder: (oldIndex, newIndex) async {
-                if (newIndex > _cards.length) newIndex = _cards.length;
-                if (oldIndex < newIndex) newIndex--;
-                setState(() {
-                  final card = _cards.removeAt(oldIndex);
-                  _cards.insert(newIndex, card);
-                });
-
-                await ApiService.moveCard(
-                  projectId: widget.projectId,
-                  cardId: _cards[newIndex].id,
-                  targetColumnId: widget.column.id,
-                  newPosition: newIndex,
-                );
-                widget.refresh();
+@override
+Widget build(BuildContext context) {
+  final width = 260.0;
+  return Container(
+    width: width,
+    padding: const EdgeInsets.all(8),
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surfaceVariant,
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Column(
+      children: [
+        // ---- header ----
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Text(widget.column.title,
+                  style: Theme.of(context).textTheme.titleMedium),
+            ),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, size: 18),
+              tooltip: 'Column options',
+              onSelected: (value) async {
+                if (value == 'delete') {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: const Text('Delete column?'),
+                      content: const Text('All cards in this column will also be deleted.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text('Cancel'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text('Delete'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed == true) {
+                    await ApiService.deleteColumn(widget.projectId, widget.column.id);
+                    widget.refresh();
+                  }
+                }
               },
-              itemBuilder: (_, i) => Card(
-                key: ValueKey(_cards[i].id),
-                child: ListTile(
-                  title: Text(_cards[i].title),
-                  subtitle: _cards[i].description != null
-                      ? Text(_cards[i].description!)
-                      : null,
+              itemBuilder: (_) => const [
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Text('Delete column'),
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        // ---- card list ----
+        Expanded(
+          child: ReorderableListView.builder(
+            itemCount: _cards.length,
+            onReorder: (oldIndex, newIndex) async {
+              if (newIndex > _cards.length) newIndex = _cards.length;
+              if (oldIndex < newIndex) newIndex--;
+              setState(() {
+                final card = _cards.removeAt(oldIndex);
+                _cards.insert(newIndex, card);
+              });
+
+              await ApiService.moveCard(
+                projectId: widget.projectId,
+                cardId: _cards[newIndex].id,
+                targetColumnId: widget.column.id,
+                newPosition: newIndex,
+              );
+              widget.refresh();
+            },
+            itemBuilder: (_, i) => Card(
+              key: ValueKey(_cards[i].id),
+              child: ListTile(
+                title: Text(_cards[i].title),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete_forever),
+                  onPressed: () async {
+                    await ApiService.deleteCard(widget.projectId, _cards[i].id);
+                    setState(() => _cards.removeAt(i));   // instant UI update
+                    widget.refresh();
+                  },
                 ),
               ),
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            tooltip: 'Add card',
-            onPressed: () async {
-              final title = await _newCardDialog(context);
-              if (title != null && title.isNotEmpty) {
-                await ApiService.addCard(
-                    widget.projectId, widget.column.id, title);
-                widget.refresh();
-              }
-            },
-          )
-        ],
-      ),
-    );
+        ),
+        // ---- add card ----
+        IconButton(
+          icon: const Icon(Icons.add),
+          tooltip: 'Add card',
+          onPressed: () async {
+            final title = await _newCardDialog(context);
+            if (title != null && title.isNotEmpty) {
+              final newCard = await ApiService.addCard(
+                  widget.projectId, widget.column.id, title);
+              setState(() => _cards.add(newCard));   // instant UI update
+              widget.refresh();
+            }
+          },
+        )
+      ],
+    ),
+  );
+}
   }
 
   Future<String?> _newCardDialog(BuildContext ctx) async {
@@ -172,4 +233,3 @@ class _ColumnWidgetState extends State<_ColumnWidget> {
       ),
     );
   }
-}

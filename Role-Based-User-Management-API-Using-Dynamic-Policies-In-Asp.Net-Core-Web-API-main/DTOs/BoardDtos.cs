@@ -14,3 +14,9 @@ public record CardDto(
     string? AssignedUserId,
     int Position,
     DateTime? DueUtc);
+public record ColumnBoardDto(
+    Guid Id,
+    string Title,
+    int Position,
+    IList<CardDto> Cards);
+

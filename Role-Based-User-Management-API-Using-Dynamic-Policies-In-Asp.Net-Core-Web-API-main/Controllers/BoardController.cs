@@ -127,4 +127,63 @@ public class BoardController : ControllerBase
         await _db.SaveChangesAsync();
         return NoContent();
     }
+
+        // GET /api/projects/{projectId}/board
+    [HttpGet("board")]
+    public async Task<ActionResult<IList<ColumnBoardDto>>> GetBoard(Guid projectId)
+    {
+        var uid = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var member = await _db.ProjectMembers
+            .FirstOrDefaultAsync(m => m.ProjectId == projectId && m.UserId == uid);
+        if (member == null) return Forbid();
+
+        var cols = await _db.BoardColumns
+            .Where(c => c.ProjectId == projectId)
+            .OrderBy(c => c.Position)
+            .Include(c => c.Cards)
+            .ToListAsync();
+
+        var dto = cols.Select(col => new ColumnBoardDto(
+            col.Id,
+            col.Title,
+            col.Position,
+            col.Cards
+                .OrderBy(card => card.Position)
+                .Select(card => new CardDto(
+                    card.Id,
+                    card.Title,
+                    card.Description,
+                    card.AssignedUserId,
+                    card.Position,
+                    card.DueUtc))
+                .ToList()
+        )).ToList();
+
+        return dto;
+    }
+
+    // Controllers/BoardController.cs  (inside class, BEFORE the final brace)
+    [HttpDelete("cards/{cardId:guid}")]
+    public async Task<IActionResult> DeleteCard(Guid projectId, Guid cardId)
+    {
+        var uid = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+        // user must be member of the project
+        var member = await _db.ProjectMembers
+            .AnyAsync(m => m.ProjectId == projectId && m.UserId == uid);
+        if (!member) return Forbid();
+
+        // find card that belongs to the same project
+        var card = await _db.TaskCards
+            .Include(c => c.Column)
+            .FirstOrDefaultAsync(c => c.Id == cardId &&
+                                    c.Column.ProjectId == projectId);
+        if (card == null) return NotFound();
+
+        _db.TaskCards.Remove(card);
+        await _db.SaveChangesAsync();
+        return NoContent();             // 204
+    }
+
+
 }

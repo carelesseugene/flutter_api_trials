@@ -151,15 +151,28 @@ static Future<void> logout() async {
 
 //BOARD METHODS START
 static Future<List<BoardColumn>> getBoard(String projectId) async {
-  final res = await _get('projects/$projectId');   // GET details
+  final res = await _get('projects/$projectId/board');  // 👈 new path
   if (res.statusCode != 200) throw Exception(res.body);
 
-  final body = jsonDecode(res.body);
-  return (body['columns'] as List)
+  return (jsonDecode(res.body) as List)
       .map((e) => BoardColumn.fromJson(e))
       .toList()
         ..sort((a, b) => a.position.compareTo(b.position));
 }
+
+// delete column
+static Future<void> deleteColumn(String projectId, String colId) async {
+  final res = await _delete('projects/$projectId/columns/$colId');
+  if (res.statusCode != 204) throw Exception(res.body);
+}
+
+// delete card
+static Future<void> deleteCard(String projectId, String cardId) async {
+  final res = await _delete('projects/$projectId/cards/$cardId');
+  if (res.statusCode != 204) throw Exception(res.body);
+}
+
+
 
 static Future<BoardColumn> addColumn(String projectId, String title) async {
   final res = await _post('projects/$projectId/columns',
