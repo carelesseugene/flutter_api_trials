@@ -9,6 +9,7 @@ import '../models/board.dart';
 class ApiService {
 
   static const _base = 'http://10.0.2.2:5129/api';
+  static const baseUrl='http://10.0.2.2:5129/api';
 
 //PROJECT METHODS START
   static Future<List<ProjectSummary>> listProjects() async {

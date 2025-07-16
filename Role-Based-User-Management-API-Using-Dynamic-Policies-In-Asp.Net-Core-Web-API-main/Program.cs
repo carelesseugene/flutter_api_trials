@@ -9,6 +9,8 @@ using WebApiWithRoleAuthentication.Authorization;
 using WebApiWithRoleAuthentication.Data;
 using WebApiWithRoleAuthentication.Models;
 using Microsoft.OpenApi.Models;
+using WebApiWithRoleAuthentication.Hubs;
+using WebApiWithRoleAuthentication.Services;
 
 const string AllowAll = "AllowAll"; 
 
@@ -45,7 +47,8 @@ builder.Services.AddSwaggerGen(c =>
             { jwtScheme, Array.Empty<string>() }
         });
 });
-
+builder.Services.AddSignalR();                          // <‑‑ add
+builder.Services.AddSingleton<BoardEventsService>();  
 
 // Program.cs
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -121,5 +124,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<BoardHub>("/hubs/board");
 
 app.Run();

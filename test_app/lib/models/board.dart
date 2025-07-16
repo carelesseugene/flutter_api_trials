@@ -1,6 +1,7 @@
 class TaskCard {
   final String id;
   final String title;
+  final String columnId;
   final String? description;
   final String? assignedUserId;
   int position;
@@ -8,6 +9,7 @@ class TaskCard {
   TaskCard({
     required this.id,
     required this.title,
+    required this.columnId,
     this.description,
     this.assignedUserId,
     required this.position,
@@ -15,6 +17,7 @@ class TaskCard {
 
   factory TaskCard.fromJson(Map<String, dynamic> j) => TaskCard(
         id: j['id'],
+        columnId: j['columnId'],
         title: j['title'],
         description: j['description'],
         assignedUserId: j['assignedUserId'],
@@ -45,5 +48,17 @@ class BoardColumn {
       .toList()
         ..sort((a, b) => a.position.compareTo(b.position)),
 );
+
+BoardColumn copyWith({
+    List<TaskCard>? cards,
+    String? title,
+    int? position,
+  }) =>
+      BoardColumn(
+        id: id,
+        title: title ?? this.title,
+        position: position ?? this.position,
+        cards: cards ?? this.cards,
+      );
 
 }

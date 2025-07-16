@@ -5,6 +5,7 @@ using System.Security.Claims;
 using WebApiWithRoleAuthentication.DTOs;
 using ProjectManagement.Domain;
 using WebApiWithRoleAuthentication.Data;
+using WebApiWithRoleAuthentication.Services;
 namespace ProjectManagement.Controllers;
 
 [ApiController]
@@ -13,6 +14,7 @@ namespace ProjectManagement.Controllers;
 public class BoardController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly BoardEventsService _events;
     public BoardController(AppDbContext db) => _db = db;
 
 
@@ -93,9 +95,13 @@ public class BoardController : ControllerBase
         };
         _db.TaskCards.Add(card);
         await _db.SaveChangesAsync();
+        await _events.CardCreated(projectId, new CardDto(
+            card.Id, card.Title, card.Description,
+            card.AssignedUserId, card.Position, card.DueUtc));
 
-        return Created("", new CardDto(card.Id, card.Title, card.Description,
-                                       card.AssignedUserId, card.Position, card.DueUtc));
+        return Created("", new CardDto(
+            card.Id, card.Title, card.Description,
+            card.AssignedUserId, card.Position, card.DueUtc));
     }
 
     // PATCH /api/projects/{projectId}/cards/{cardId}/move
@@ -125,6 +131,9 @@ public class BoardController : ControllerBase
         card.Position = dto.NewPosition;
 
         await _db.SaveChangesAsync();
+        await _events.CardMoved(projectId, new CardDto(
+            card.Id, card.Title, card.Description,
+            card.AssignedUserId, card.Position, card.DueUtc));
         return NoContent();
     }
 
