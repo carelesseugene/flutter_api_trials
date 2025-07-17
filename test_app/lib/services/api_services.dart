@@ -221,10 +221,11 @@ static Future<http.Response> _patch(String path,
 }
 //BOARD METHODS END
 static Future<ProjectDetails?> getProjectDetails(String projectId) async {
-  final res = await _get('projects/$projectId');      // GET /api/projects/{id}
-  if (res.statusCode != 200) return null;             // 403,404 → null
+  final res = await _get('projects/$projectId');   // GET /api/projects/{id}
+  if (res.statusCode != 200) return null;
   return ProjectDetails.fromJson(jsonDecode(res.body));
 }
+
 
 
 

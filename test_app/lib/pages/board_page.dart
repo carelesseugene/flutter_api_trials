@@ -195,15 +195,16 @@ class _ColumnWidgetState extends State<_ColumnWidget> {
 class _BoardPageState extends ConsumerState<BoardPage> {
   final _rt = RealtimeService();
   late Future<ProjectDetails?> _projectFuture;
+  ProjectDetails? _details; 
 
-  @override
+ @override
   void initState() {
     super.initState();
-    _projectFuture = ApiService.getProjectDetails(widget.projectId);
+    _projectFuture = ApiService.getProjectDetails(widget.projectId)
+      ..then((d) => _details = d);              // cache result
     _rt.connect(ref, widget.projectId).catchError((e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Realtime connection failed: $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Realtime failed: $e')));
     });
   }
 
@@ -223,29 +224,28 @@ class _BoardPageState extends ConsumerState<BoardPage> {
     IconButton(
   tooltip: 'Members',
   icon: const Icon(Icons.group),
-  onPressed: () async {
-    final details = await ApiService.getProjectDetails(widget.projectId);
-    if (!mounted) return;                 // <- use `mounted` from State
-    if (details == null) {
+  onPressed: () {
+    if (_details == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not load member list')),
+        const SnackBar(content: Text('Project details still loading…')),
       );
       return;
     }
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => MembersPage(details.members),
+        builder: (_) => MembersPage(_details!.members),
       ),
     );
   },
 ),
 
+
   ],
 ),
       body: Column(
         children: [
-          // --- Project summary card at top ---
+        
           FutureBuilder<ProjectDetails?>(
             future: _projectFuture,
             builder: (context, snapshot) {
