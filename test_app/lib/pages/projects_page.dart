@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/project_provider.dart';
 import '../services/api_services.dart';
-import '../pages/login_page.dart';
 import '../pages/board_page.dart';
 class ProjectsPage extends ConsumerWidget {
   const ProjectsPage({super.key});
@@ -15,18 +14,6 @@ class ProjectsPage extends ConsumerWidget {
       appBar: AppBar(
             title: const Text('Projects'),
             actions: [
-              IconButton(
-                icon: const Icon(Icons.logout),
-                tooltip: 'Log out',
-                onPressed: () async {
-                  await ApiService.logout();
-                  if (context.mounted) {
-                    Navigator.pushAndRemoveUntil(
-                        context, MaterialPageRoute(builder: (_) => const LoginPage()), (_) => false,
-                        );   
-                  }
-                },
-              )
             ],
           ),
       body: projectsAsync.when(

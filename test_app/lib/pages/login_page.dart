@@ -1,11 +1,5 @@
 import 'package:flutter/material.dart';
 import '../services/api_services.dart';
-import '../models/user.dart';
-//import 'profile_page.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
-
-
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -24,9 +18,8 @@ class _LoginPageState extends State<LoginPage> {
         emailController.text.trim(), passwordController.text);
 
     if (ok) {
-      final user = await ApiService.getProfile();
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/projects');
+      Navigator.pushReplacementNamed(context, '/home'); // Go to dashboard
     } else {
       setState(() => error = 'Wrong e-mail / password');
     }
@@ -57,7 +50,4 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
-  
-
-
 }

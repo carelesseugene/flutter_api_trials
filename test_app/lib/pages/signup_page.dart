@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../services/api_services.dart';
-import 'profile_page.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -23,10 +22,8 @@ class _SignupPageState extends State<SignupPage> {
     );
 
     if (ok) {
-      final user = await ApiService.getProfile();
       if (!mounted) return;
-      Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (_) => ProfilePage(user: user!)));
+      Navigator.pushReplacementNamed(context, '/home');
     } else {
       setState(() => message = 'Sign-up failed');
     }
