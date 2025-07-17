@@ -15,7 +15,9 @@ public class BoardController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly BoardEventsService _events;
-    public BoardController(AppDbContext db) => _db = db;
+    public BoardController(AppDbContext db, BoardEventsService events)
+        => (_db, _events) = (db, events);
+
 
 
     // POST /api/projects/{projectId}/columns

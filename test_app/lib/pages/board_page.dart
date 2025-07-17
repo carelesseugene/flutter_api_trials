@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:test_app/services/realtime_service.dart';
 import '../models/board.dart';
 import '../providers/board_provider.dart';
 import '../services/api_services.dart';
@@ -14,6 +15,27 @@ class BoardPage extends ConsumerStatefulWidget {
 }
 
 class _BoardPageState extends ConsumerState<BoardPage> {
+  final _rt=RealtimeService();
+  @override
+  void initState() {
+    super.initState();
+    // connect to realtime service when page is opened
+    _rt.connect(ref, widget.projectId).catchError((e) {
+      // handle connection errors
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Realtime connection failed: $e')),
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+
+    _rt.dispose();
+    super.dispose();
+    
+  }
+  
   @override
   Widget build(BuildContext context) {
     final boardAsync = ref.watch(boardProvider(widget.projectId));
@@ -48,6 +70,7 @@ class _BoardPageState extends ConsumerState<BoardPage> {
         separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemCount: cols.length,
         itemBuilder: (_, i) => _ColumnWidget(
+          key:ValueKey(cols[i].id), 
           column: cols[i],
           projectId: widget.projectId,
           refresh: () => ref
@@ -103,9 +126,9 @@ class _ColumnWidgetState extends State<_ColumnWidget> {
   void didUpdateWidget(covariant _ColumnWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     // sync local _cards if provider sends new data
-    if (oldWidget.column.cards != widget.column.cards) {
-      setState(() => _cards = [...widget.column.cards]);
-    }
+   if (oldWidget.column.cards.length != widget.column.cards.length) {
+    setState(() => _cards = [...widget.column.cards]);
+  }
   }
 
   @override

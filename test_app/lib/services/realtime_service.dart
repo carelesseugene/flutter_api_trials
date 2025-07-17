@@ -31,7 +31,13 @@ class RealtimeService {
     final newCard = TaskCard.fromJson(raw as Map<String, dynamic>);
     ref.read(boardProvider(pid).notifier).addCard(newCard);
   }
-
+  Future<void> dispose() async {
+    if (_hub.state == HubConnectionState.connected) {
+      await _hub.stop();
+    }
+  }
   Future<String> _getToken() async =>
       (await SharedPreferences.getInstance()).getString('token') ?? '';
+
+      
 }
