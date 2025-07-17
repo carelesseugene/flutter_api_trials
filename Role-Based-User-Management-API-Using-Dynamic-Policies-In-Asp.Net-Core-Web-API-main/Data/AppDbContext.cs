@@ -31,6 +31,12 @@ namespace WebApiWithRoleAuthentication.Data
                 .HasMany(p => p.Columns)
                 .WithOne(c => c.Project)
                 .HasForeignKey(c => c.ProjectId);
+            
+            builder.Entity<Project>()
+                .HasOne(p => p.CreatedBy)
+                .WithMany()   // No back-collection needed
+                .HasForeignKey(p => p.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<BoardColumn>()
                 .HasIndex(c => new { c.ProjectId, c.Position })

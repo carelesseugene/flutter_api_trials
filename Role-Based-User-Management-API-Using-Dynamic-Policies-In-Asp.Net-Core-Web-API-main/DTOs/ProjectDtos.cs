@@ -1,20 +1,18 @@
-using System;
-using System.Collections.Generic;
 using ProjectManagement.Domain;
-using WebApiWithRoleAuthentication.DTOs;
 namespace WebApiWithRoleAuthentication.DTOs;
-
 public record CreateProjectDto(string Name, string? Description);
-
-
-public record ProjectSummaryDto(Guid Id, string Name);
-
-
 public record MemberDto(string UserId, string Email, ProjectRole Role);
+
+public record ProjectSummaryDto(
+    Guid Id,
+    string Name,
+    string OwnerEmail,                 // NEW
+    int MemberCount);                  // NEW
 
 public record ProjectDetailsDto(
     Guid Id,
     string Name,
     string? Description,
-    IList<ColumnDto> Columns,
-    IList<MemberDto> Members);
+    string OwnerEmail,                 // NEW
+    IList<MemberDto> Members,
+    IList<ColumnDto> Columns);
