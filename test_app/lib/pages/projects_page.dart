@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/project_provider.dart';
 import '../services/api_services.dart';
 import '../pages/board_page.dart';
+
 class ProjectsPage extends ConsumerWidget {
   const ProjectsPage({super.key});
 
@@ -12,33 +13,36 @@ class ProjectsPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-            title: const Text('Projects'),
-            actions: [
-            ],
-          ),
+        title: const Text('Projects'),
+        actions: [],
+      ),
       body: projectsAsync.when(
         data: (list) => ListView.separated(
           itemCount: list.length,
           separatorBuilder: (_, __) => const Divider(height: 1),
-          itemBuilder: (_, i) => ListTile(
-            title: Text(list[i].name),
-            onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => BoardPage(
-                projectId: list[i].id,
-                projectName: list[i].name,
+          itemBuilder: (_, i) {
+            final p = list[i];
+            return ListTile(
+              title: Text(p.name),
+              subtitle: Text('Owner: ${p.ownerEmail} • ${p.memberCount} members'),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => BoardPage(
+                    projectId: p.id,
+                    projectName: p.name,
+                  ),
+                ),
               ),
-            ),
-          ),
-            trailing: IconButton(
-              icon: const Icon(Icons.delete),
-              onPressed: () async {
-                await ApiService.deleteProject(list[i].id);
-                ref.invalidate(projectsProvider);
-              },
-            ),
-          ),
+              trailing: IconButton(
+                icon: const Icon(Icons.delete),
+                onPressed: () async {
+                  await ApiService.deleteProject(p.id);
+                  ref.invalidate(projectsProvider);
+                },
+              ),
+            );
+          },
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text(e.toString())),
