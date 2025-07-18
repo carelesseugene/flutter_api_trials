@@ -11,6 +11,8 @@ namespace WebApiWithRoleAuthentication.Data
         public DbSet<ProjectMember> ProjectMembers => Set<ProjectMember>();
         public DbSet<BoardColumn> BoardColumns => Set<BoardColumn>();
         public DbSet<TaskCard>     TaskCards      => Set<TaskCard>();
+        public DbSet<Notification> Notifications  => Set<Notification>();
+        public DbSet<ProjectInvitation> ProjectInvitations => Set<ProjectInvitation>();
 
         public AppDbContext(DbContextOptions options) : base(options)
         {
@@ -75,6 +77,24 @@ namespace WebApiWithRoleAuthentication.Data
                     UserId = adminUser.Id
                 }
             );
-        }
+            // ---------- INVITATIONS ----------
+            builder.Entity<ProjectInvitation>()
+            .HasKey(i => new { i.ProjectId, i.UserId });
+
+            builder.Entity<ProjectInvitation>()
+            .HasOne(i => i.Project)
+            .WithMany(p => p.Invitations)
+            .HasForeignKey(i => i.ProjectId);
+
+            builder.Entity<ProjectInvitation>()
+            .HasOne(i => i.User)
+            .WithMany()
+            .HasForeignKey(i => i.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+            // ---------- NOTIFICATIONS ----------
+            builder.Entity<Notification>()
+            .HasIndex(n => n.UserId);
+                }
     }
 }

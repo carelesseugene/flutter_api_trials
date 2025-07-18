@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Microsoft.AspNetCore.Identity; // <-- add this
+using Microsoft.AspNetCore.Identity;
 using ProjectManagement.Domain;
 
 public class Project
@@ -16,4 +16,6 @@ public class Project
 
     public ICollection<ProjectMember> Members { get; set; } = new List<ProjectMember>();
     public ICollection<BoardColumn>   Columns { get; set; } = new List<BoardColumn>();
+    public ICollection<ProjectInvitation> Invitations { get; set; } = [];
+
 }

@@ -6,7 +6,8 @@ using WebApiWithRoleAuthentication.DTOs;
 using ProjectManagement.Domain;
 using WebApiWithRoleAuthentication.Data;
 using WebApiWithRoleAuthentication.Services;
-namespace ProjectManagement.Controllers;
+using WebApiWithRoleAuthentication.Extensions;
+namespace WebApiWithRoleAuthentication.Controllers;
 
 [ApiController]
 [Route("api/projects/{projectId:guid}")]
