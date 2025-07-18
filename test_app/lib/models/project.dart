@@ -21,12 +21,17 @@ class MemberDto {
   final String userId;
   final String email;
   final ProjectRole role;
+
   MemberDto.fromJson(Map j)
       : userId = j['userId'],
         email  = j['email'],
-        role   = ProjectRole.values
-            .firstWhere((r) => r.name.toLowerCase() ==
-                              (j['role'] as String).toLowerCase());
+        role   = j['role'] is String                         // string or int?
+            ? _fromString(j['role'] as String)
+            : ProjectRole.values[(j['role'] as num).toInt()];
+
+  static ProjectRole _fromString(String s) => ProjectRole.values
+      .firstWhere((r) => r.name.toLowerCase() == s.toLowerCase(),
+          orElse: () => ProjectRole.member); // fallback
 }
 
 class ProjectDetails {

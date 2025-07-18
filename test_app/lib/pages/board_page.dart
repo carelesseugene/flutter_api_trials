@@ -224,13 +224,18 @@ class _BoardPageState extends ConsumerState<BoardPage> {
     IconButton(
   tooltip: 'Members',
   icon: const Icon(Icons.group),
-  onPressed: () {
+  onPressed: () async {
+    // wait if details still loading
+    if (_details == null) _details = await _projectFuture;
+
+    if (!mounted) return;                       // state disposed
     if (_details == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Project details still loading…')),
+        const SnackBar(content: Text('Could not load member list (403 / 404)')),
       );
       return;
     }
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -239,6 +244,7 @@ class _BoardPageState extends ConsumerState<BoardPage> {
     );
   },
 ),
+
 
 
   ],
