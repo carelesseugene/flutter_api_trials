@@ -3,13 +3,14 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
-using WebApiWithRoleAuthentication.DTOs;
-using ProjectManagement.Domain;
-using WebApiWithRoleAuthentication.Data;
 using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
+using WebApiWithRoleAuthentication.DTOs;
+using WebApiWithRoleAuthentication.Data;
 using WebApiWithRoleAuthentication.Hubs;
 using WebApiWithRoleAuthentication.Extensions;
+using ProjectManagement.Domain;
+
 
 namespace WebApiWithRoleAuthentication.Controllers;
 
@@ -20,17 +21,21 @@ public class ProjectsController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly UserManager<IdentityUser> _userManager;
-    private readonly IHubContext<BoardHub> _hub;
+    private readonly IHubContext<BoardHub> _hub = null!;
 
-    public ProjectsController(AppDbContext db, UserManager<IdentityUser> um)
-        => (_db, _userManager) = (db, um);
     public ProjectsController(
         AppDbContext db,
         UserManager<IdentityUser> um,
         IHubContext<BoardHub> hub)
-        => (_db, _userManager, _hub) = (db, um, hub);
+    {
+        _db = db;
+        _userManager = um;
+        _hub = hub;
+    }
 
-    // ---------- List projects current user is member of ----------
+    /* ------------------------------------------------------------------
+       List projects the current user is member of
+       ------------------------------------------------------------------ */
     [HttpGet]
     public async Task<IReadOnlyList<ProjectSummaryDto>> List()
     {
@@ -50,7 +55,9 @@ public class ProjectsController : ControllerBase
             .ToListAsync();
     }
 
-    // ---------- Get details of a single project ----------
+    /* ------------------------------------------------------------------
+       Get details of a single project
+       ------------------------------------------------------------------ */
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<ProjectDetailsDto>> Get(Guid id)
     {
@@ -78,29 +85,35 @@ public class ProjectsController : ControllerBase
                 .ToList());
     }
 
-    // ---------- Create new project ----------
+    /* ------------------------------------------------------------------
+       Create new project
+       ------------------------------------------------------------------ */
     [HttpPost]
     public async Task<ActionResult<ProjectSummaryDto>> Create(CreateProjectDto dto)
     {
         var uid = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
         var user = await _userManager.FindByIdAsync(uid);
 
-        var project = new Project {
+        var project = new Project
+        {
             Name = dto.Name,
             Description = dto.Description,
             CreatedByUserId = uid,
-            Members = {
+            Members =
+            {
                 new ProjectMember { UserId = uid, Role = ProjectRole.Lead }
             }
         };
         _db.Projects.Add(project);
         await _db.SaveChangesAsync();
 
-        return Created("", new ProjectSummaryDto(
+        return Created(string.Empty, new ProjectSummaryDto(
             project.Id, project.Name, user!.Email!, 1));
     }
 
-    // ---------- Delete a project (lead only) ----------
+    /* ------------------------------------------------------------------
+       Delete a project (lead only)
+       ------------------------------------------------------------------ */
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
@@ -118,52 +131,58 @@ public class ProjectsController : ControllerBase
         await _db.SaveChangesAsync();
         return NoContent();
     }
-    // DTO for request body
-public record InviteRequest(string Email);
 
-[Authorize(Policy = "CanManageProject")]   // owner/lead
-[HttpPost("{projectId:guid}/invite")]
-public async Task<IActionResult> Invite(Guid projectId, [FromBody] InviteRequest body)
-{
-    var invitee = await _userManager.FindByEmailAsync(body.Email);
-    if (invitee is null) return NotFound("User not found");
+    /* ------------------------------------------------------------------
+       INVITE MEMBER  (owner/lead only)
+       ------------------------------------------------------------------ */
+    public record InviteRequest(string Email);
 
-    var exists = await _db.ProjectInvitations.FindAsync(projectId, invitee.Id);
-    if (exists is not null && exists.Status == ProjectInvitation.InvitationStatus.Pending)
-        return Conflict("Already invited");
-
-    // record invitation
-    _db.ProjectInvitations.Add(new ProjectInvitation
+    [Authorize(Policy = "CanManageProject")]
+    [HttpPost("{projectId:guid}/invite")]
+    public async Task<IActionResult> Invite(Guid projectId, [FromBody] InviteRequest body)
     {
-        ProjectId = projectId,
-        UserId    = invitee.Id
-    });
+        var normalized= _userManager.NormalizeEmail(body.Email.Trim());
+        var invitee = await _userManager.Users
+        .SingleOrDefaultAsync(u => u.NormalizedEmail == normalized);
+        if (invitee is null) return NotFound("User not found");
 
-    // create notification
-    var project = await _db.Projects.FindAsync(projectId);
-    var notif = new Notification
-    {
-        UserId      = invitee.Id,
-        Type        = NotificationType.Invite,
-        PayloadJson = JsonSerializer.Serialize(new {
-            projectId,
-            projectName = project!.Name
-        })
-    };
-    _db.Notifications.Add(notif);
-    await _db.SaveChangesAsync();
+        var exists = await _db.ProjectInvitations.FindAsync(projectId, invitee.Id);
+        if (exists is not null && exists.Status == ProjectInvitation.InvitationStatus.Pending)
+            return Conflict("Already invited");
 
-    // push real‑time via SignalR
-    await _hub.Clients.User(invitee.Id)
-               .SendAsync("NotificationAdded", new {
-                   notif.Id,
-                   notif.Type,
-                   notif.Status,
-                   notif.CreatedUtc,
-                   payload = JsonSerializer.Deserialize<object>(notif.PayloadJson)
-               });
+        // record invitation
+        _db.ProjectInvitations.Add(new ProjectInvitation
+        {
+            ProjectId = projectId,
+            UserId    = invitee.Id
+        });
 
-    return Ok();
-}
+        // create notification
+        var project = await _db.Projects.FindAsync(projectId);
+        var notif = new Notification
+        {
+            UserId      = invitee.Id,
+            Type        = NotificationType.Invite,
+            PayloadJson = JsonSerializer.Serialize(new
+            {
+                projectId,
+                projectName = project!.Name
+            })
+        };
+        _db.Notifications.Add(notif);
+        await _db.SaveChangesAsync();
 
+        // push real-time via SignalR
+        await _hub.Clients.User(invitee.Id)
+            .SendAsync("NotificationAdded", new
+            {
+                notif.Id,
+                notif.Type,
+                notif.Status,
+                notif.CreatedUtc,
+                payload = JsonSerializer.Deserialize<object>(notif.PayloadJson)
+            });
+
+        return Ok();
+    }
 }

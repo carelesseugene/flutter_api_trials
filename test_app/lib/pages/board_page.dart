@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:test_app/services/realtime_service.dart';
+import 'package:collection/collection.dart'; 
 import '../models/board.dart';
-import '../models/project.dart'; // <-- You have this!
+import '../models/project.dart'; 
 import '../providers/board_provider.dart';
 import '../services/api_services.dart';
 import '../pages/members_page.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../pages/notifications_page.dart';
+import '../providers/notification_provider.dart';
+import '../models/notification.dart';
+
 
 class BoardPage extends ConsumerStatefulWidget {
   final String projectId;
@@ -221,6 +228,34 @@ class _BoardPageState extends ConsumerState<BoardPage> {
       appBar:AppBar(
   title: Text(widget.projectName),
   actions: [
+    Consumer(builder: (context, ref, _) {
+  final unread = ref.watch(notificationsProvider)
+                     .where((n) => n.status == NotificationStatus.unread)
+                     .length;
+  return IconButton(
+    tooltip: 'Notifications',
+    icon: Stack(
+      children: [
+        const Icon(Icons.notifications),
+        if (unread > 0)
+          Positioned(
+            right: 0, top: 0,
+            child: CircleAvatar(
+              radius: 6,
+              backgroundColor: Colors.red,
+              child: Text(unread.toString(),
+                          style: const TextStyle(fontSize: 8,color: Colors.white)),
+            ),
+          ),
+      ],
+    ),
+    onPressed: () {
+      Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const NotificationsPage()));
+    },
+  );
+}),
+
     IconButton(
   tooltip: 'Members',
   icon: const Icon(Icons.group),
@@ -235,11 +270,28 @@ class _BoardPageState extends ConsumerState<BoardPage> {
       );
       return;
     }
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    // ---------- identify the user ----------
+    final claims = JwtDecoder.decode(token!);
+    final uid    = claims['sub'] ?? claims['nameid'];     // works for either claim
+    final email  = claims['email'];
+
+    // try both userId AND e-mail to locate self
+    final me = _details!.members.firstWhereOrNull(
+        (m) => m.userId == uid || m.email.toLowerCase() == email.toLowerCase());
+
+    final amManager = me != null && me.role == ProjectRole.lead;;
 
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => MembersPage(_details!.members),
+        builder: (_) => MembersPage(
+          projectId: widget.projectId,
+          amManager: amManager,
+          members: _details!.members,
+        ),
       ),
     );
   },
@@ -338,5 +390,3 @@ class _BoardPageState extends ConsumerState<BoardPage> {
     );
   }
 }
-
-// Your _ColumnWidget stays the same!

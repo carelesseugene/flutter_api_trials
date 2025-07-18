@@ -3,27 +3,27 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using System.Security.Cryptography;
 using System.Text;
 using WebApiWithRoleAuthentication.Authorization;
 using WebApiWithRoleAuthentication.Data;
-using WebApiWithRoleAuthentication.Models;
-using Microsoft.OpenApi.Models;
 using WebApiWithRoleAuthentication.Hubs;
+using WebApiWithRoleAuthentication.Models;
 using WebApiWithRoleAuthentication.Services;
+using WebApiWithRoleAuthentication.Requirements;      // ← NEW  (namespace for OwnerOrLead*)
 
-const string AllowAll = "AllowAll"; 
+const string AllowAll = "AllowAll";
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
+/*───────────────── MVC & Swagger ─────────────────*/
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { Title = "RBAC API", Version = "v1" });
+
     var jwtScheme = new OpenApiSecurityScheme
     {
         Scheme = "bearer",
@@ -32,83 +32,84 @@ builder.Services.AddSwaggerGen(c =>
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.Http,
         Description = "Paste **only** your JWT token here",
-
         Reference = new OpenApiReference
         {
             Id   = JwtBearerDefaults.AuthenticationScheme,
             Type = ReferenceType.SecurityScheme
         }
     };
-
     c.AddSecurityDefinition(jwtScheme.Reference.Id, jwtScheme);
-    c.AddSecurityRequirement(
-        new OpenApiSecurityRequirement
-        {
-            { jwtScheme, Array.Empty<string>() }
-        });
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement { { jwtScheme, Array.Empty<string>() } });
 });
-builder.Services.AddSignalR();                          // <‑‑ add
-builder.Services.AddSingleton<BoardEventsService>();  
 
-// Program.cs
-builder.Services.AddDbContext<AppDbContext>(options =>
-options.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
+/*───────────────── SignalR & custom board events ─────────────────*/
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<BoardEventsService>();
 
-builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
+/*───────────────── EF Core + Identity ─────────────────*/
+builder.Services.AddDbContext<AppDbContext>(opt =>
+    opt.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
+
+builder.Services.AddIdentity<IdentityUser, IdentityRole>(opt =>
 {
-    options.Password.RequiredLength = 6;
-    options.Password.RequireNonAlphanumeric = false;
-    options.Password.RequireDigit = false;
-    options.Password.RequireUppercase = false;
-    options.Password.RequireLowercase = false;
-    options.User.RequireUniqueEmail = true;
-    options.SignIn.RequireConfirmedAccount = false;
-    options.SignIn.RequireConfirmedEmail = false;
-    options.SignIn.RequireConfirmedPhoneNumber = false;
+    opt.Password.RequiredLength         = 6;
+    opt.Password.RequireNonAlphanumeric = false;
+    opt.Password.RequireDigit           = false;
+    opt.Password.RequireUppercase       = false;
+    opt.Password.RequireLowercase       = false;
+    opt.User.RequireUniqueEmail         = true;
+    opt.SignIn.RequireConfirmedAccount  = false;
 })
-    .AddEntityFrameworkStores<AppDbContext>()
-    .AddDefaultTokenProviders();
+.AddEntityFrameworkStores<AppDbContext>()
+.AddDefaultTokenProviders();
 
-
-
-builder.Services.AddAuthentication(options =>
+/*───────────────── JWT auth ─────────────────*/
+builder.Services.AddAuthentication(opt =>
 {
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+    opt.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    opt.DefaultChallengeScheme    = JwtBearerDefaults.AuthenticationScheme;
+    opt.DefaultScheme             = JwtBearerDefaults.AuthenticationScheme;
 })
-.AddJwtBearer(options =>
+.AddJwtBearer(opt =>
 {
-    options.TokenValidationParameters = new TokenValidationParameters
+    opt.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateIssuer = true,
-        ValidateAudience = false,
-        ValidateLifetime = true,
+        ValidateIssuer           = true,
+        ValidateAudience         = false,
+        ValidateLifetime         = true,
         ValidateIssuerSigningKey = true,
-        ValidIssuer = builder.Configuration["Jwt:Issuer"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+        ValidIssuer              = builder.Configuration["Jwt:Issuer"],
+        IssuerSigningKey         = new SymmetricSecurityKey(
+                                        Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
     };
 });
 
-builder.Services.AddAuthorization();
+/*───────────────── Authorization ─────────────────*/
+builder.Services.AddAuthorization(opts =>
+{
+    // dynamic policies you already had
+    // (DynamicPolicyProvider + DynamicRoleHandler handle [Authorize(Roles=…)])
+    opts.AddPolicy("CanManageProject", policy =>                         // ← NEW
+        policy.RequireAuthenticatedUser()
+              .AddRequirements(new OwnerOrLeadRequirement()));           // ← NEW
+});
+
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, DynamicPolicyProvider>();
 builder.Services.AddSingleton<IAuthorizationHandler, DynamicRoleHanlder>();
+builder.Services.AddScoped<IAuthorizationHandler, OwnerOrLeadHandler>(); // ← NEW
 
+/*───────────────── Misc ─────────────────*/
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy(AllowAll, p => p
-        .AllowAnyOrigin()
-        .AllowAnyMethod()
-        .AllowAnyHeader());
-});
+builder.Services.AddCors(opt =>
+    opt.AddPolicy(AllowAll, p => p.AllowAnyOrigin()
+                                  .AllowAnyMethod()
+                                  .AllowAnyHeader()));
 
 var app = builder.Build();
 
-
-// Configure the HTTP request pipeline.
+/*───────────────── HTTP pipeline ─────────────────*/
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -116,11 +117,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 app.UseCors(AllowAll);
-
 app.UseAuthentication();
-
 app.UseAuthorization();
 
 app.MapControllers();

@@ -15,7 +15,7 @@ class ProjectSummary {
 }
 
 /* --- Member DTO used in details & board pages ---------------- */
-enum ProjectRole { owner, lead, member }
+enum ProjectRole { lead, member }
 
 class MemberDto {
   final String userId;
@@ -29,9 +29,8 @@ class MemberDto {
             ? _fromString(j['role'] as String)
             : ProjectRole.values[(j['role'] as num).toInt()];
 
-  static ProjectRole _fromString(String s) => ProjectRole.values
-      .firstWhere((r) => r.name.toLowerCase() == s.toLowerCase(),
-          orElse: () => ProjectRole.member); // fallback
+  static ProjectRole _fromString(String s) =>
+      s.toLowerCase().startsWith('lead') ? ProjectRole.lead : ProjectRole.member;// fallback
 }
 
 class ProjectDetails {

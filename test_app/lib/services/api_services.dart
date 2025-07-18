@@ -5,6 +5,7 @@ import 'package:jwt_decoder/jwt_decoder.dart';
 import '../models/user.dart';
 import '../models/project.dart';
 import '../models/board.dart';
+import '../models/notification.dart';
 
 class ApiService {
 
@@ -66,7 +67,30 @@ static Future<http.Response> _get(String path) async {
     });
   }
 //HELPER METHODS END
-  
+
+
+// INVITE METHODS START 
+static Future<void> inviteUser(String projectId, String email) async {
+  final res = await _post('projects/$projectId/invite', body: {'email': email});
+  if (res.statusCode != 200) throw Exception(res.body);
+}
+static Future<List<NotificationDto>> getNotifications() async {
+  final res = await _get('notifications');
+  if (res.statusCode != 200) throw Exception(res.body);
+  final list = jsonDecode(res.body) as List;
+  return list.map((e) => NotificationDto.fromJson(e)).toList();
+}
+
+static Future<void> respondInvite(
+    String projectId, bool accept) async {
+  final res = await _post(
+      'notifications/$projectId/invites/${accept ? 'accept' : 'reject'}');
+  if (res.statusCode != 204) throw Exception(res.body);
+}
+
+// INVITE METHODS END
+
+
 
   static Future<SharedPreferences> _prefs() => SharedPreferences.getInstance();
  

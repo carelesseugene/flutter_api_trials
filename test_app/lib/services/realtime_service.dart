@@ -4,6 +4,8 @@ import '../models/board.dart';
 import 'api_services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/board_provider.dart';
+import '../models/notification.dart';
+import '../providers/notification_provider.dart';
 
 class RealtimeService {
   late HubConnection _hub;
@@ -25,6 +27,13 @@ class RealtimeService {
         ref.invalidate(boardProvider(projectId)));
     _hub.on('ColumnCreated', (args) =>
         ref.invalidate(boardProvider(projectId)));
+
+    _hub.on('NotificationAdded', (args) {
+        final notif = NotificationDto.fromJson(
+            Map<String, dynamic>.from(args![0] as Map));
+        ref.read(notificationsProvider.notifier).add(notif);
+      });
+
   }
 
   void _patchBoard(WidgetRef ref, String pid, Map raw) {
