@@ -4,11 +4,24 @@ import '../models/notification.dart';
 import '../providers/notification_provider.dart';
 import '../services/api_services.dart';
 
-class NotificationsPage extends ConsumerWidget {
+class NotificationsPage extends ConsumerStatefulWidget {
   const NotificationsPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<NotificationsPage> createState() => _NotificationsPageState();
+}
+
+class _NotificationsPageState extends ConsumerState<NotificationsPage> {
+  @override
+  void initState() {
+    super.initState();
+    // always fetch fresh notifications on open
+    Future.microtask(() =>
+        ref.read(notificationsProvider.notifier).load());
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final list = ref.watch(notificationsProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('Notifications')),
@@ -48,6 +61,6 @@ class NotificationsPage extends ConsumerWidget {
 
   Future<void> _respond(WidgetRef ref, String pid, bool accept) async {
     await ApiService.respondInvite(pid, accept);
-    ref.read(notificationsProvider.notifier).load();
+    await ref.read(notificationsProvider.notifier).load();
   }
 }

@@ -48,7 +48,9 @@ builder.Services.AddSingleton<BoardEventsService>();
 
 /*───────────────── EF Core + Identity ─────────────────*/
 builder.Services.AddDbContext<AppDbContext>(opt =>
-    opt.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
+    opt.UseSqlServer(builder.Configuration.GetConnectionString("Default"))
+    .EnableSensitiveDataLogging()
+    .EnableDetailedErrors());
 
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(opt =>
 {

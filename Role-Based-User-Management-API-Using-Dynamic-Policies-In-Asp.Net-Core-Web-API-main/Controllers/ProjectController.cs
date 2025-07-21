@@ -141,10 +141,17 @@ public class ProjectsController : ControllerBase
     [HttpPost("{projectId:guid}/invite")]
     public async Task<IActionResult> Invite(Guid projectId, [FromBody] InviteRequest body)
     {
-        var normalized= _userManager.NormalizeEmail(body.Email.Trim());
+        var emailRaw   = body.Email.Trim();
+        var normalized = emailRaw.ToUpperInvariant();          // identical to row
+
         var invitee = await _userManager.Users
-        .SingleOrDefaultAsync(u => u.NormalizedEmail == normalized);
-        if (invitee is null) return NotFound("User not found");
+            .AsNoTracking()
+            .SingleOrDefaultAsync(u =>
+                u.NormalizedEmail == normalized ||              // main path
+                u.Email           == emailRaw);                 // fallback
+
+        if (invitee == null)
+            return NotFound("User not found");
 
         var exists = await _db.ProjectInvitations.FindAsync(projectId, invitee.Id);
         if (exists is not null && exists.Status == ProjectInvitation.InvitationStatus.Pending)
