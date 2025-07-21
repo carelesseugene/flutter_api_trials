@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/project_provider.dart';
 import '../services/api_services.dart';
 import '../pages/board_page.dart';
+import '../providers/notification_provider.dart';   // + NEW
+import '../models/notification.dart';               // + NEW
+import '../pages/notifications_page.dart';                   // + NEW
 
 class ProjectsPage extends ConsumerWidget {
   const ProjectsPage({super.key});
@@ -14,8 +17,42 @@ class ProjectsPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Projects'),
-        actions: [],
-      ),
+        actions: [
+          Consumer(builder: (context, ref, _) {
+            final unread = ref
+                .watch(notificationsProvider)
+                .where((n) => n.status == NotificationStatus.unread)
+                .length;
+
+            return IconButton(
+              tooltip: 'Notifications',
+              icon: Stack(
+                children: [
+                  const Icon(Icons.notifications),
+                  if (unread > 0)
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: CircleAvatar(
+                        radius: 6,
+                        backgroundColor: Colors.red,
+                        child: Text(
+                          '$unread',
+                          style: const TextStyle(
+                              fontSize: 8, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const NotificationsPage()),
+              ),
+            );
+          }),
+        ]),
       body: projectsAsync.when(
         data: (list) => ListView.separated(
           itemCount: list.length,

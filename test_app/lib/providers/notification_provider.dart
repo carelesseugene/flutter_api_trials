@@ -10,8 +10,15 @@ final notificationsProvider =
 class NotificationCtrl extends StateNotifier<List<NotificationDto>> {
   NotificationCtrl() : super([]);
 
-  Future<void> load() async =>
+  /* fetch from server every time we call load() */
+  Future<void> load() async {
+    try {
       state = await ApiService.getNotifications();
+    } catch (_) {
+      state = [];
+    }
+  }
 
+  /* pushed from SignalR */
   void add(NotificationDto n) => state = [n, ...state];
 }

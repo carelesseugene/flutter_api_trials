@@ -4,8 +4,24 @@ import 'pages/projects_page.dart';
 import 'pages/login_page.dart';
 import 'pages/signup_page.dart';
 import 'pages/dashboard_page.dart';  // <-- add this import
-import 'pages/profile_page.dart';    // <-- for profile route, create if not exists
-void main() => runApp(const ProviderScope(child: MyApp()));
+import 'pages/profile_page.dart';
+import '../services/realtime_service.dart';
+final realtimeServiceProvider =
+    Provider<RealtimeService>((_) => throw UnimplementedError());
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final rt = RealtimeService();        
+  runApp(
+    ProviderScope(
+      overrides: [
+        realtimeServiceProvider.overrideWithValue(rt),
+      ],
+      child: const MyApp(),
+    ),
+  );
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});

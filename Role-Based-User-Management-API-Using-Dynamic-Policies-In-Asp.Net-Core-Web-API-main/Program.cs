@@ -12,7 +12,7 @@ using WebApiWithRoleAuthentication.Hubs;
 using WebApiWithRoleAuthentication.Models;
 using WebApiWithRoleAuthentication.Services;
 using WebApiWithRoleAuthentication.Requirements;      // ← NEW  (namespace for OwnerOrLead*)
-
+using Microsoft.AspNetCore.SignalR;
 const string AllowAll = "AllowAll";
 
 var builder = WebApplication.CreateBuilder(args);
