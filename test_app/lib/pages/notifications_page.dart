@@ -15,9 +15,11 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
   @override
   void initState() {
     super.initState();
-    // always fetch fresh notifications on open
-    Future.microtask(() =>
-        ref.read(notificationsProvider.notifier).load());
+    Future.microtask(() => ref.read(notificationsProvider.notifier).load());
+  }
+
+  Future<void> _refresh() async {
+    await ref.read(notificationsProvider.notifier).load();
   }
 
   @override
@@ -25,10 +27,13 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
     final list = ref.watch(notificationsProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('Notifications')),
-      body: ListView.separated(
-        itemCount: list.length,
-        separatorBuilder: (_, __) => const Divider(height: 1),
-        itemBuilder: (_, i) => _tile(ref, list[i]),
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: ListView.separated(
+          itemCount: list.length,
+          separatorBuilder: (_, __) => const Divider(height: 1),
+          itemBuilder: (_, i) => _tile(ref, list[i]),
+        ),
       ),
     );
   }
@@ -45,11 +50,17 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
           children: [
             IconButton(
               icon: const Icon(Icons.check),
-              onPressed: () => _respond(ref, pid, true),
+              onPressed: () async {
+                await ApiService.respondInvite(pid, true);
+                await ref.read(notificationsProvider.notifier).load();
+              },
             ),
             IconButton(
               icon: const Icon(Icons.close),
-              onPressed: () => _respond(ref, pid, false),
+              onPressed: () async {
+                await ApiService.respondInvite(pid, false);
+                await ref.read(notificationsProvider.notifier).load();
+              },
             ),
           ],
         ),
@@ -57,10 +68,5 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
     }
     // fallback
     return const SizedBox.shrink();
-  }
-
-  Future<void> _respond(WidgetRef ref, String pid, bool accept) async {
-    await ApiService.respondInvite(pid, accept);
-    await ref.read(notificationsProvider.notifier).load();
   }
 }

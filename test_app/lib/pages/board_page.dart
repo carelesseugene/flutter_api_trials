@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:collection/collection.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
-import '../main.dart';                             // realtimeServiceProvider
+import 'package:shared_preferences/shared_preferences.dart';                     // realtimeServiceProvider
 import '../models/board.dart';
 import '../models/project.dart';
 import '../models/notification.dart';

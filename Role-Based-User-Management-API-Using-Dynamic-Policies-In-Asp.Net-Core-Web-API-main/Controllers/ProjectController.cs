@@ -136,60 +136,60 @@ public class ProjectsController : ControllerBase
        INVITE MEMBER  (owner/lead only)
        ------------------------------------------------------------------ */
     public record InviteRequest(string Email);
+[Authorize(Policy = "CanManageProject")]
+[HttpPost("{projectId:guid}/invite")]
+public async Task<IActionResult> Invite(Guid projectId, [FromBody] InviteRequest body)
+{
+    var emailRaw = body.Email.Trim();
+    var normalized = emailRaw.ToUpperInvariant();
 
-    [Authorize(Policy = "CanManageProject")]
-    [HttpPost("{projectId:guid}/invite")]
-    public async Task<IActionResult> Invite(Guid projectId, [FromBody] InviteRequest body)
+    var invitee = await _userManager.Users
+        .AsNoTracking()
+        .SingleOrDefaultAsync(u =>
+            u.NormalizedEmail == normalized ||
+            u.Email == emailRaw);
+
+    if (invitee == null)
+        return NotFound("User not found");
+
+    var exists = await _db.ProjectInvitations.FindAsync(projectId, invitee.Id);
+    if (exists is not null && exists.Status == ProjectInvitation.InvitationStatus.Pending)
+        return Conflict("Already invited");
+
+    // Add records
+    var invitation = new ProjectInvitation
     {
-        var emailRaw   = body.Email.Trim();
-        var normalized = emailRaw.ToUpperInvariant();          // identical to row
+        ProjectId = projectId,
+        UserId = invitee.Id
+    };
+    _db.ProjectInvitations.Add(invitation);
 
-        var invitee = await _userManager.Users
-            .AsNoTracking()
-            .SingleOrDefaultAsync(u =>
-                u.NormalizedEmail == normalized ||              // main path
-                u.Email           == emailRaw);                 // fallback
-
-        if (invitee == null)
-            return NotFound("User not found");
-
-        var exists = await _db.ProjectInvitations.FindAsync(projectId, invitee.Id);
-        if (exists is not null && exists.Status == ProjectInvitation.InvitationStatus.Pending)
-            return Conflict("Already invited");
-
-        // record invitation
-        _db.ProjectInvitations.Add(new ProjectInvitation
+    var project = await _db.Projects.FindAsync(projectId);
+    var notif = new Notification
+    {
+        UserId = invitee.Id,
+        Type = NotificationType.Invite,
+        PayloadJson = JsonSerializer.Serialize(new
         {
-            ProjectId = projectId,
-            UserId    = invitee.Id
-        });
+            projectId,
+            projectName = project?.Name ?? "(unknown)"
+        })
+    };
+    _db.Notifications.Add(notif);
 
-        // create notification
-        var project = await _db.Projects.FindAsync(projectId);
-        var notif = new Notification
-        {
-            UserId      = invitee.Id,
-            Type        = NotificationType.Invite,
-            PayloadJson = JsonSerializer.Serialize(new
-            {
-                projectId,
-                projectName = project!.Name
-            })
-        };
-        _db.Notifications.Add(notif);
+    try
+    {
         await _db.SaveChangesAsync();
-
-        // push real-time via SignalR
-        await _hub.Clients.User(invitee.Id)
-            .SendAsync("NotificationAdded", new
-            {
-                notif.Id,
-                notif.Type,
-                notif.Status,
-                notif.CreatedUtc,
-                payload = JsonSerializer.Deserialize<object>(notif.PayloadJson)
-            });
-
-        return Ok();
+        Console.WriteLine("Invite & notification successfully added!");
     }
+    catch (Exception ex)
+    {
+        Console.WriteLine("DB Save Error: " + ex.Message);
+        return StatusCode(500, ex.Message);
+    }
+
+    return Ok();
+}
+
+
 }

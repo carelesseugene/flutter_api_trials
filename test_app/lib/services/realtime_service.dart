@@ -8,6 +8,9 @@ import '../providers/board_provider.dart';
 import '../providers/notification_provider.dart';
 import 'api_services.dart';
 
+final realtimeServiceProvider = Provider<RealtimeService>((ref) => RealtimeService());
+
+
 class RealtimeService {
   HubConnection? _hub;
   bool _initialized = false;

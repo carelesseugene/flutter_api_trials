@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/api_services.dart';
+import '../services/realtime_service.dart';
 
-class LoginPage extends StatefulWidget {
+
+class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  ConsumerState<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginPageState extends ConsumerState<LoginPage> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   String error = '';
@@ -18,8 +21,9 @@ class _LoginPageState extends State<LoginPage> {
         emailController.text.trim(), passwordController.text);
 
     if (ok) {
+      await ref.read(realtimeServiceProvider).ensureConnected(ref.read);
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/home'); // Go to dashboard
+      Navigator.pushReplacementNamed(context, '/home');
     } else {
       setState(() => error = 'Wrong e-mail / password');
     }

@@ -4,13 +4,12 @@ import '../services/api_services.dart';
 
 final notificationsProvider =
     StateNotifierProvider<NotificationCtrl, List<NotificationDto>>(
-  (ref) => NotificationCtrl()..load(),
+  (ref) => NotificationCtrl(),
 );
 
 class NotificationCtrl extends StateNotifier<List<NotificationDto>> {
   NotificationCtrl() : super([]);
 
-  /* fetch from server every time we call load() */
   Future<void> load() async {
     try {
       state = await ApiService.getNotifications();
@@ -18,7 +17,4 @@ class NotificationCtrl extends StateNotifier<List<NotificationDto>> {
       state = [];
     }
   }
-
-  /* pushed from SignalR */
-  void add(NotificationDto n) => state = [n, ...state];
 }

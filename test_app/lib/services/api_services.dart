@@ -1,17 +1,13 @@
 import 'dart:convert';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../main.dart';                       // realtimeServiceProvider
 import '../models/board.dart';
 import '../models/notification.dart';
 import '../models/project.dart';
 import '../models/user.dart';
-import '../services/realtime_service.dart';
 
-/* ------------ End-points ------------ */
 class ApiService {
   static const _host    = 'http://10.0.2.2:5129';
   static const baseUrl  = '$_host/api';
@@ -61,57 +57,45 @@ class ApiService {
   /* ==============================================================
      AUTH
      ============================================================== */
- static Future<bool> login(String email, String password) async {
-  final res = await http.post(
-    Uri.parse('$baseUrl/Account/login'),
-    headers: {'Content-Type': 'application/json'},
-    body: jsonEncode({'email': email, 'password': password}),
-  );
+  static Future<bool> login(String email, String password) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/Account/login'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email, 'password': password}),
+    );
 
-  if (res.statusCode == 200) {
-    final token = jsonDecode(res.body)['token'];
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('token', token);
-
-    // 🔌 open realtime hub so notifications start flowing
-   // final container = ProviderContainer();
-   // final rt = container.read(realtimeServiceProvider);
-   // await rt.ensureConnected(container.read);
-
-    return true;
+    if (res.statusCode == 200) {
+      final token = jsonDecode(res.body)['token'];
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('token', token);
+      return true;
+    }
+    return false;
   }
-  return false;
-}
 
-static Future<bool> signup({
-  required String email,
-  required String password,
-  required String phone,
-}) async {
-  final res = await http.post(
-    Uri.parse('$baseUrl/Account/register'),
-    headers: {'Content-Type': 'application/json'},
-    body: jsonEncode({
-      'email': email,
-      'password': password,
-      'phoneNumber': phone,
-    }),
-  );
+  static Future<bool> signup({
+    required String email,
+    required String password,
+    required String phone,
+  }) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/Account/register'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email': email,
+        'password': password,
+        'phoneNumber': phone,
+      }),
+    );
 
-  if (res.statusCode == 200) {
-    final token = jsonDecode(res.body)['token'];
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('token', token);
-
-  /*  final container = ProviderContainer();
-    final rt = container.read(realtimeServiceProvider);
-    await rt.ensureConnected(container.read);*/
-
-    return true;
+    if (res.statusCode == 200) {
+      final token = jsonDecode(res.body)['token'];
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('token', token);
+      return true;
+    }
+    return false;
   }
-  return false;
-}
-
 
   static Future<void> logout() async =>
       (await SharedPreferences.getInstance()).remove('token');
