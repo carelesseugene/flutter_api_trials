@@ -52,14 +52,14 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
               icon: const Icon(Icons.check),
               onPressed: () async {
                 await ApiService.respondInvite(pid, true);
-                await ref.read(notificationsProvider.notifier).load();
+                ref.read(notificationsProvider.notifier).remove(n.id);
               },
             ),
             IconButton(
               icon: const Icon(Icons.close),
               onPressed: () async {
                 await ApiService.respondInvite(pid, false);
-                await ref.read(notificationsProvider.notifier).load();
+                ref.read(notificationsProvider.notifier).remove(n.id);
               },
             ),
           ],
