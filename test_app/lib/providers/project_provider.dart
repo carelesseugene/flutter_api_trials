@@ -5,4 +5,5 @@ import '../models/project.dart';
 final projectsProvider =
     FutureProvider.autoDispose<List<ProjectSummary>>((ref) async {
   return ApiService.listProjects();
-});
+}); 
+

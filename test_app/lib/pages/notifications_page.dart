@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/notification.dart';
 import '../providers/notification_provider.dart';
 import '../services/api_services.dart';
+import '../providers/project_provider.dart';
 
 class NotificationsPage extends ConsumerStatefulWidget {
   const NotificationsPage({super.key});
@@ -53,6 +54,8 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
               onPressed: () async {
                 await ApiService.respondInvite(pid, true);
                 ref.read(notificationsProvider.notifier).remove(n.id);
+                await _refresh();
+                ref.invalidate(projectsProvider);
               },
             ),
             IconButton(
@@ -60,6 +63,8 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
               onPressed: () async {
                 await ApiService.respondInvite(pid, false);
                 ref.read(notificationsProvider.notifier).remove(n.id);
+                await _refresh();
+                ref.invalidate(projectsProvider);
               },
             ),
           ],

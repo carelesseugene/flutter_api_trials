@@ -27,28 +27,67 @@ namespace WebApiWithRoleAuthentication.Controllers
         public async Task<IEnumerable<object>> Get()
         {
             var uid = User.GetUserId();
+
             var list = await _db.Notifications
-                .Where(n => n.UserId == uid)
+                .Where(n => n.UserId == uid && n.Status != NotificationStatus.Actioned)
                 .OrderByDescending(n => n.CreatedUtc)
                 .ToListAsync();
 
-            // Deserialize payload in memory for client
-            return list.Select(n => new
+            // Filter out invites for projects that don't exist
+            var filtered = new List<Notification>();
+            foreach (var n in list)
+            {
+                if (n.Type == NotificationType.Invite)
+                {
+                    // Get projectId from payload
+                    var payload = JsonSerializer.Deserialize<Dictionary<string, object>>(n.PayloadJson);
+                    if (payload != null && payload.TryGetValue("projectId", out var projIdObj))
+                    {
+                        Guid projId;
+                        if (Guid.TryParse(projIdObj.ToString(), out projId))
+                        {
+                            var projectExists = _db.Projects.Any(p => p.Id == projId);
+                            if (!projectExists)
+                                continue; // Skip this notification!
+                        }
+                    }
+                }
+                filtered.Add(n);
+            }
+
+            return filtered.Select(n => new
             {
                 n.Id,
-                type=(int)n.Type,
-                status=(int)n.Status,
+                type = (int)n.Type,
+                status = (int)n.Status,
                 n.CreatedUtc,
                 payload = JsonSerializer.Deserialize<object>(n.PayloadJson)
             });
         }
+
 
         [HttpPost("{projectId:guid}/invites/{decision:regex(accept|reject)}")]
         public async Task<IActionResult> Decide(Guid projectId, string decision)
         {
             var uid = User.GetUserId();
             var invite = await _db.ProjectInvitations.FindAsync(projectId, uid);
-            if (invite is null || invite.Status != ProjectInvitation.InvitationStatus.Pending)
+
+            // If invite is gone (e.g. project deleted), action notification anyway
+            if (invite is null)
+            {
+                var notif = await _db.Notifications.FirstOrDefaultAsync(n =>
+                    n.UserId == uid &&
+                    n.Type == NotificationType.Invite &&
+                    n.PayloadJson.Contains(projectId.ToString()));
+                if (notif != null)
+                {
+                    notif.Status = NotificationStatus.Actioned;
+                    await _db.SaveChangesAsync();
+                }
+                return NotFound();
+            }
+
+            if (invite.Status != ProjectInvitation.InvitationStatus.Pending)
                 return NotFound();
 
             invite.Status = decision == "accept"
@@ -56,11 +95,11 @@ namespace WebApiWithRoleAuthentication.Controllers
                 : ProjectInvitation.InvitationStatus.Rejected;
 
             // mark notification actioned
-            var notif = await _db.Notifications.FirstAsync(n =>
+            var notification = await _db.Notifications.FirstAsync(n =>
                 n.UserId == uid &&
                 n.Type == NotificationType.Invite &&
                 n.PayloadJson.Contains(projectId.ToString()));
-            notif.Status = NotificationStatus.Actioned;
+            notification.Status = NotificationStatus.Actioned;
 
             if (decision == "accept")
             {
@@ -72,9 +111,9 @@ namespace WebApiWithRoleAuthentication.Controllers
                 });
             }
 
-            await _db.SaveChangesAsync(); // <-- Always save changes, even if SignalR fails
+            await _db.SaveChangesAsync();
 
-            // Try to broadcast new member via SignalR (optional)
+            // Try SignalR (optional, as before)
             if (decision == "accept" && _hub != null)
             {
                 try
@@ -88,11 +127,11 @@ namespace WebApiWithRoleAuthentication.Controllers
                 }
                 catch (Exception ex)
                 {
-                    // Log error if needed, but do not block response
                     Console.WriteLine($"[SignalR] Error broadcasting member: {ex}");
                 }
             }
             return NoContent();
         }
+
     }
 }
