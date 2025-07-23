@@ -192,4 +192,42 @@ public async Task<IActionResult> Invite(Guid projectId, [FromBody] InviteRequest
 }
 
 
+// For members (including owner, but frontend should block owner from self-removal)
+[HttpDelete("{projectId:guid}/leave")]
+public async Task<IActionResult> Leave(Guid projectId)
+{
+    var uid = User.GetUserId();
+    var member = await _db.ProjectMembers
+        .FirstOrDefaultAsync(pm => pm.ProjectId == projectId && pm.UserId == uid);
+    if (member == null) return NotFound();
+    // Prevent owner from leaving via this route
+    if (member.Role == ProjectRole.Lead)
+        return BadRequest("Owner cannot leave; must delete project or transfer ownership.");
+    _db.ProjectMembers.Remove(member);
+    await _db.SaveChangesAsync();
+    return NoContent();
+}
+
+// For owner to remove a member
+[HttpDelete("{projectId:guid}/members/{userId}")]
+public async Task<IActionResult> RemoveMember(Guid projectId, string userId)
+{
+    var uid = User.GetUserId();
+    var owner = await _db.ProjectMembers
+        .FirstOrDefaultAsync(pm => pm.ProjectId == projectId && pm.UserId == uid && pm.Role == ProjectRole.Lead);
+    if (owner == null) return Forbid(); // Only owner allowed
+
+    // Prevent removing self (owner)
+    if (userId == uid) return BadRequest("Owner cannot remove themselves.");
+
+    var member = await _db.ProjectMembers
+        .FirstOrDefaultAsync(pm => pm.ProjectId == projectId && pm.UserId == userId);
+    if (member == null) return NotFound();
+    _db.ProjectMembers.Remove(member);
+    await _db.SaveChangesAsync();
+    return NoContent();
+}
+
+
+
 }

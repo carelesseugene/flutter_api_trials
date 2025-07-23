@@ -105,6 +105,7 @@ class ApiService {
     if (token == null) return null;
 
     final email = JwtDecoder.decode(token)['email'];
+    
 
     final res = await http.post(
       Uri.parse('$baseUrl/User/user-info'),
@@ -241,4 +242,12 @@ class ApiService {
     });
     if (res.statusCode != 204) throw Exception(res.body);
   }
+  static Future<void> leaveProject(String projectId) async {
+  await _delete('projects/$projectId/leave');
+}
+
+static Future<void> removeMember(String projectId, String userId) async {
+  await _delete('projects/$projectId/members/$userId');
+}
+
 }
