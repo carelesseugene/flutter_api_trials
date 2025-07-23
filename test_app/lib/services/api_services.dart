@@ -164,10 +164,14 @@ class ApiService {
       _delete('projects/$id');
 
   static Future<ProjectDetails?> getProjectDetails(String projectId) async {
-    final res = await _get('projects/$projectId');
-    if (res.statusCode != 200) return null;
-    return ProjectDetails.fromJson(jsonDecode(res.body));
-  }
+  final res = await _get('projects/$projectId');
+  print('API called: /projects/$projectId | Status: ${res.statusCode}');
+  if (res.statusCode != 200) return null;
+  final result = ProjectDetails.fromJson(jsonDecode(res.body));
+  print('ProjectDetails loaded, members: ${result.members.length}');
+  return result;
+}
+
 
   /* ==============================================================
      INVITATIONS & NOTIFICATIONS

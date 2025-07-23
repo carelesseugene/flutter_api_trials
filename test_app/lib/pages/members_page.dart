@@ -6,8 +6,8 @@ import '../services/api_services.dart';
 
 class MembersPage extends StatefulWidget {
   final String projectId;
-  final bool amManager; // owner / lead (optional)
-  final List<MemberDto> members; // can pass empty []
+  final bool amManager;
+  final List<MemberDto> members;
 
   const MembersPage({
     super.key,
@@ -71,6 +71,8 @@ class _MembersPageState extends State<MembersPage> {
         if (mounted) {
           ScaffoldMessenger.of(ctx)
               .showSnackBar(const SnackBar(content: Text('Invitation sent')));
+          await Future.delayed(const Duration(milliseconds: 400));
+          setState(() => _futureDetails = ApiService.getProjectDetails(widget.projectId));
         }
       } catch (_) {
         if (mounted) {
@@ -84,6 +86,7 @@ class _MembersPageState extends State<MembersPage> {
   Future<void> _removeMember(BuildContext ctx, MemberDto member) async {
     try {
       await ApiService.removeMember(widget.projectId, member.userId);
+      await Future.delayed(const Duration(milliseconds: 400)); // <-- CRUCIAL DELAY
       if (mounted) {
         ScaffoldMessenger.of(ctx)
             .showSnackBar(SnackBar(content: Text('Removed ${member.email}')));
@@ -103,7 +106,7 @@ class _MembersPageState extends State<MembersPage> {
       if (mounted) {
         ScaffoldMessenger.of(ctx)
             .showSnackBar(const SnackBar(content: Text('You left the project')));
-        Navigator.of(ctx).pop(); // Go back to project list
+        Navigator.of(ctx).pop();
       }
     } catch (_) {
       if (mounted) {
@@ -116,47 +119,70 @@ class _MembersPageState extends State<MembersPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Members')),
+      appBar: AppBar(
+        title: const Text('Members'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              setState(() => _futureDetails = ApiService.getProjectDetails(widget.projectId));
+            },
+          ),
+        ],
+      ),
       body: FutureBuilder<ProjectDetails?>(
         future: _futureDetails,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting || myEmail == null) {
             return const Center(child: CircularProgressIndicator());
           }
-          final details = snapshot.data;
-          final members = details?.members ?? widget.members;
-          // Find self by email (since only email is available in JWT)
+          if (snapshot.hasError) {
+            return Center(child: Text('Error loading members: ${snapshot.error}'));
+          }
+          if (!snapshot.hasData || snapshot.data == null) {
+            return const Center(child: Text('Could not load members.'));
+          }
+          final details = snapshot.data!;
+          final members = details.members;
+          if (members.isEmpty) {
+            return const Center(child: Text('No members found.'));
+          }
           final me = members.firstWhere(
-          (m) => m.email == myEmail,
-          orElse: () => members[0], // just pick first member if not found
-        );
-
-          final isOwner = me != null && me.role == ProjectRole.lead;
+            (m) => m.email == myEmail,
+            orElse: () => members[0],
+          );
+          final isOwner = me.role == ProjectRole.lead;
 
           return Column(
             children: [
               Expanded(
-                child: ListView.separated(
-                  itemCount: members.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (_, i) {
-                    final member = members[i];
-                    final isMe = member.email == myEmail;
-                    return ListTile(
-                      leading: CircleAvatar(
-                        child: Text(member.email[0].toUpperCase()),
-                      ),
-                      title: Text(member.email),
-                      subtitle: Text(member.role.name),
-                      trailing: isOwner && !isMe
-                          ? IconButton(
-                              icon: const Icon(Icons.remove_circle, color: Colors.red),
-                              tooltip: 'Remove from project',
-                              onPressed: () => _removeMember(context, member),
-                            )
-                          : null,
-                    );
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    setState(() => _futureDetails = ApiService.getProjectDetails(widget.projectId));
+                    await _futureDetails;
                   },
+                  child: ListView.separated(
+                    itemCount: members.length,
+                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    itemBuilder: (_, i) {
+                      final member = members[i];
+                      final isMe = member.email == myEmail;
+                      return ListTile(
+                        leading: CircleAvatar(
+                          child: Text(member.email[0].toUpperCase()),
+                        ),
+                        title: Text(member.email),
+                        subtitle: Text(member.role.name),
+                        trailing: isOwner && !isMe
+                            ? IconButton(
+                                icon: const Icon(Icons.remove_circle, color: Colors.red),
+                                tooltip: 'Remove from project',
+                                onPressed: () => _removeMember(context, member),
+                              )
+                            : null,
+                      );
+                    },
+                  ),
                 ),
               ),
               if (!isOwner)

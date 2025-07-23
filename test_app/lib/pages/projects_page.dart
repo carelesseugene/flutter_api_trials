@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/project_provider.dart';
 import '../services/api_services.dart';
 import '../pages/board_page.dart';
-import '../providers/notification_provider.dart';   // + NEW
-import '../models/notification.dart';               // + NEW
-import '../pages/notifications_page.dart';                   // + NEW
+import '../providers/notification_provider.dart';  
+import '../models/notification.dart';               
+import '../pages/notifications_page.dart';
+import '../pages/members_page.dart';    // <-- MembersPage'i import et!
 
 class ProjectsPage extends ConsumerWidget {
   const ProjectsPage({super.key});
@@ -62,15 +63,20 @@ class ProjectsPage extends ConsumerWidget {
             return ListTile(
               title: Text(p.name),
               subtitle: Text('Owner: ${p.ownerEmail} • ${p.memberCount} members'),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => BoardPage(
-                    projectId: p.id,
-                    projectName: p.name,
+              onTap: () async {
+                // BoardPage veya MembersPage’den dönünce projeleri otomatik yenile
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => BoardPage(
+                      projectId: p.id,
+                      projectName: p.name,
+                    ),
                   ),
-                ),
-              ),
+                );
+                // Projeye üyelik/çıkış/üye silme olmuşsa burada otomatik refresh olur!
+                ref.invalidate(projectsProvider);
+              },
               trailing: IconButton(
                 icon: const Icon(Icons.delete),
                 onPressed: () async {
@@ -78,6 +84,20 @@ class ProjectsPage extends ConsumerWidget {
                   ref.invalidate(projectsProvider);
                 },
               ),
+              onLongPress: () async {
+                // Opsiyonel: doğrudan üyeler sayfası!
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => MembersPage(
+                      projectId: p.id,
+                      amManager: true, // (veya senin auth kontrolünle)
+                      members: const [], // Listeyi boş bırakabilirsin, MembersPage kendisi dolduracak
+                    ),
+                  ),
+                );
+                ref.invalidate(projectsProvider); // Üyelik değişikliği varsa anında güncellenir
+              },
             );
           },
         ),
