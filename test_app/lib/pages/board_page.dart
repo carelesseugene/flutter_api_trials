@@ -33,14 +33,20 @@ class _ColumnWidget extends StatefulWidget {
   final BoardColumn column;
   final String projectId;
   final Future<void> Function() refresh;
+  // NEW ↓
+  final List<MemberDto> members;
+  final bool isLead;
+  final String myUserId;
 
   const _ColumnWidget({
     required this.column,
     required this.projectId,
     required this.refresh,
+    required this.members,   // NEW
+    required this.isLead,    // NEW
+    required this.myUserId,  // NEW
     Key? key,
   }) : super(key: key);
-
   @override
   State<_ColumnWidget> createState() => _ColumnWidgetState();
 }
@@ -201,32 +207,59 @@ class _ColumnWidgetState extends State<_ColumnWidget> {
 }
 
 class _BoardPageState extends ConsumerState<BoardPage> {
+  // ─────────────────────────── fields ───────────────────────────
   late RealtimeService _rt;
   late Future<ProjectDetails?> _projectFuture;
   ProjectDetails? _details;
 
+  String _myUserId = '';   // current user id
+  bool   _isLead   = false; // am I project lead?
+
+  // ─────────────────────────── lifecycle ───────────────────────────
   @override
   void initState() {
     super.initState();
 
-    _rt = ref.read(realtimeServiceProvider);            // 🔗 singleton
+    // realtime
+    _rt = ref.read(realtimeServiceProvider);
     _rt.connectBoard(ref, widget.projectId).catchError((e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Realtime failed: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Realtime failed: $e')));
+      }
     });
 
-    _projectFuture = ApiService.getProjectDetails(widget.projectId)
-      ..then((d) => _details = d);
+    _loadUserAndProject();
   }
 
-  // no dispose: global connection remains active
+  Future<void> _loadUserAndProject() async {
+    /* ----- current user id ----- */
+    final prefs  = await SharedPreferences.getInstance();
+    final token  = prefs.getString('token');
+    if (token != null) {
+      final claims = JwtDecoder.decode(token);
+      _myUserId = (claims['sub'] ?? claims['nameid'] ?? '').toString();
+    }
 
+    /* ----- project details ----- */
+    _projectFuture = ApiService.getProjectDetails(widget.projectId);
+    _details = await _projectFuture;
+
+    if (_details != null && _myUserId.isNotEmpty) {
+      final me = _details!.members.firstWhereOrNull((m) => m.userId == _myUserId);
+      _isLead = me != null && me.role == ProjectRole.lead;
+    }
+
+    if (mounted) setState(() {});
+  }
+
+  // ─────────────────────────── UI ───────────────────────────
   @override
   Widget build(BuildContext context) {
     final boardAsync = ref.watch(boardProvider(widget.projectId));
 
     return Scaffold(
-      appBar: AppBar(
+      appBar:AppBar(
         title: Text(widget.projectName),
         actions: [
           /* -------- bell -------- */
@@ -304,17 +337,18 @@ class _BoardPageState extends ConsumerState<BoardPage> {
       ),
       body: Column(
         children: [
+          /* ----- project header card ----- */
           FutureBuilder<ProjectDetails?>(
             future: _projectFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
+            builder: (_, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
                 return const Padding(
                   padding: EdgeInsets.all(12),
                   child: LinearProgressIndicator(),
                 );
               }
-              final project = snapshot.data;
-              if (project == null) {
+              final p = snap.data;
+              if (p == null) {
                 return const Padding(
                   padding: EdgeInsets.all(12),
                   child: Text('Project details unavailable'),
@@ -324,15 +358,15 @@ class _BoardPageState extends ConsumerState<BoardPage> {
                 margin: const EdgeInsets.fromLTRB(16, 16, 16, 4),
                 child: ListTile(
                   leading: const Icon(Icons.info_outline),
-                  title: Text(project.name),
+                  title: Text(p.name),
                   subtitle: Text(
-                    'Owner: ${project.ownerEmail} • ${project.members.length} members',
+                    'Owner: ${p.ownerEmail} • ${p.members.length} members',
                   ),
                 ),
               );
             },
           ),
-          /* --- board columns --- */
+          /* ----- board ----- */
           Expanded(
             child: boardAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -343,8 +377,8 @@ class _BoardPageState extends ConsumerState<BoardPage> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        child: const Icon(Icons.add),
         tooltip: 'Add column',
+        child: const Icon(Icons.add),
         onPressed: () async {
           final title = await _newColumnDialog(context);
           if (title?.isNotEmpty == true) {
@@ -356,6 +390,7 @@ class _BoardPageState extends ConsumerState<BoardPage> {
     );
   }
 
+  // ─────────────────────────── helpers ───────────────────────────
   Widget _buildBoard(List<BoardColumn> cols) => ScrollConfiguration(
         behavior: const ScrollBehavior().copyWith(scrollbars: true),
         child: ListView.separated(
@@ -370,6 +405,9 @@ class _BoardPageState extends ConsumerState<BoardPage> {
             refresh: () => ref
                 .read(boardProvider(widget.projectId).notifier)
                 .refresh(),
+            members : _details?.members ?? [],
+            isLead  : _isLead,
+            myUserId: _myUserId,
           ),
         ),
       );
