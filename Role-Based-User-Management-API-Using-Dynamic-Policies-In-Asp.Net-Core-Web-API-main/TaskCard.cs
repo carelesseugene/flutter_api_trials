@@ -14,4 +14,6 @@ public class TaskCard
     public int    Position { get; set; }             
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
     public DateTime? DueUtc    { get; set; }
+
+    public int ProgressPercent { get; set; } = 0;
 }

@@ -44,8 +44,10 @@ namespace WebApiWithRoleAuthentication.Data
                 .HasIndex(c => new { c.ProjectId, c.Position })
                 .IsUnique();
             builder.Entity<TaskCard>()
-                .HasIndex(c => new { c.ColumnId, c.Position })
-                .IsUnique();
+                .HasOne(c => c.AssignedUser)
+                .WithMany()
+                .HasForeignKey(c => c.AssignedUserId)
+                .OnDelete(DeleteBehavior.SetNull);
             builder.Entity<IdentityRole>().HasData(
                 new IdentityRole { Id = "1", Name = "Admin", NormalizedName = "ADMIN" },
                 new IdentityRole { Id = "2", Name = "User", NormalizedName = "USER" }

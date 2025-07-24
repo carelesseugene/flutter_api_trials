@@ -254,4 +254,18 @@ static Future<void> removeMember(String projectId, String userId) async {
   await _delete('projects/$projectId/members/$userId');
 }
 
+// Assign a user to a card
+static Future<void> assignUserToCard(String projectId, String cardId, String userId) async {
+  final res = await _post('projects/$projectId/cards/$cardId/assign', body: {'userId': userId});
+  if (res.statusCode != 204) throw Exception(res.body);
+}
+
+// Update card progress
+static Future<void> updateCardProgress(String projectId, String cardId, int progress) async {
+  final res = await _patch('projects/$projectId/cards/$cardId/progress', body: {'progress': progress});
+  if (res.statusCode != 204) throw Exception(res.body);
+}
+
+
+
 }

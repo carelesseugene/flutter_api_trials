@@ -13,7 +13,9 @@ public record CardDto(
     string Title,
     string? Description,
     string? AssignedUserId,
+    string? AssignedUserEmail,     // ← NEW
     int Position,
+    int ProgressPercent,           // ← NEW
     DateTime? DueUtc);
 public record ColumnBoardDto(
     Guid Id,

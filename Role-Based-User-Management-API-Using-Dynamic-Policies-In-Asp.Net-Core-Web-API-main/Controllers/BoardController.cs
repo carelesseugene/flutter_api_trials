@@ -72,8 +72,6 @@ public class BoardController : ControllerBase
         return NoContent();
     }
 
-    /* ========== CARD endpoints ========== */
-
     // POST /api/projects/{projectId}/columns/{colId}/cards
     [HttpPost("columns/{colId:guid}/cards")]
     public async Task<ActionResult<CardDto>> AddCard(
@@ -98,13 +96,26 @@ public class BoardController : ControllerBase
         };
         _db.TaskCards.Add(card);
         await _db.SaveChangesAsync();
-        await _events.CardCreated(projectId, new CardDto(
-            card.Id,card.ColumnId, card.Title, card.Description,
-            card.AssignedUserId, card.Position, card.DueUtc));
+        await _events.CardCreated(projectId, new CardDto(card.Id,
+        card.ColumnId,
+        card.Title,
+        card.Description,
+        card.AssignedUserId,
+        card.AssignedUser?.Email,     
+        card.Position,
+        card.ProgressPercent,         
+        card.DueUtc));
 
         return Created("", new CardDto(
-            card.Id,card.ColumnId, card.Title, card.Description,
-            card.AssignedUserId, card.Position, card.DueUtc));
+            card.Id,
+        card.ColumnId,
+        card.Title,
+        card.Description,
+        card.AssignedUserId,
+        card.AssignedUser?.Email,     // NEW
+        card.Position,
+        card.ProgressPercent,         // NEW
+        card.DueUtc));
     }
 
     // PATCH /api/projects/{projectId}/cards/{cardId}/move
@@ -135,8 +146,15 @@ public class BoardController : ControllerBase
 
         await _db.SaveChangesAsync();
         await _events.CardMoved(projectId, new CardDto(
-            card.Id,card.ColumnId, card.Title, card.Description,
-            card.AssignedUserId, card.Position, card.DueUtc));
+            card.Id,
+        card.ColumnId,
+        card.Title,
+        card.Description,
+        card.AssignedUserId,
+        card.AssignedUser?.Email,     // NEW
+        card.Position,
+        card.ProgressPercent,         // NEW
+        card.DueUtc));
         return NoContent();
     }
 
@@ -163,12 +181,14 @@ public class BoardController : ControllerBase
                 .OrderBy(card => card.Position)
                 .Select(card => new CardDto(
                     card.Id,
-                    card.ColumnId,
-                    card.Title,
-                    card.Description,
-                    card.AssignedUserId,
-                    card.Position,
-                    card.DueUtc))
+        card.ColumnId,
+        card.Title,
+        card.Description,
+        card.AssignedUserId,
+        card.AssignedUser?.Email,     // NEW
+        card.Position,
+        card.ProgressPercent,         // NEW
+        card.DueUtc))
                 .ToList()
         )).ToList();
 
@@ -197,6 +217,66 @@ public class BoardController : ControllerBase
         await _db.SaveChangesAsync();
         return NoContent();             // 204
     }
+
+
+    [HttpPost("cards/{cardId:guid}/assign")]
+public async Task<IActionResult> AssignUserToCard(Guid projectId, Guid cardId, [FromBody] AssignCardRequest req)
+{
+    var uid = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+    // Only lead can assign
+    var lead = await _db.ProjectMembers
+        .FirstOrDefaultAsync(m => m.ProjectId == projectId && m.UserId == uid && m.Role == ProjectRole.Lead);
+    if (lead == null) return Forbid();
+
+    var card = await _db.TaskCards
+        .Include(c => c.Column)
+        .FirstOrDefaultAsync(c => c.Id == cardId && c.Column.ProjectId == projectId);
+    if (card == null) return NotFound();
+
+    var user = await _db.Users.FindAsync(req.UserId);
+    if (user == null) return NotFound("User not found");
+
+    // Only assign project members
+    var member = await _db.ProjectMembers.FirstOrDefaultAsync(m => m.ProjectId == projectId && m.UserId == req.UserId);
+    if (member == null) return BadRequest("User is not a member of this project");
+
+    card.AssignedUserId = req.UserId;
+    card.AssignedUser = user;
+    await _db.SaveChangesAsync();
+
+    return NoContent();
+}
+
+public record AssignCardRequest(string UserId);
+
+
+
+[HttpPatch("cards/{cardId:guid}/progress")]
+public async Task<IActionResult> UpdateCardProgress(Guid projectId, Guid cardId, [FromBody] UpdateCardProgressRequest req)
+{
+    var uid = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+    var card = await _db.TaskCards
+        .Include(c => c.Column)
+        .FirstOrDefaultAsync(c => c.Id == cardId && c.Column.ProjectId == projectId);
+
+    if (card == null) return NotFound();
+
+    // Only assigned user or lead can update
+    var member = await _db.ProjectMembers.FirstOrDefaultAsync(m => m.ProjectId == projectId && m.UserId == uid);
+    if (member == null) return Forbid();
+    if (card.AssignedUserId != uid && member.Role != ProjectRole.Lead)
+        return Forbid();
+
+    card.ProgressPercent = Math.Max(0, Math.Min(100, req.Progress));
+    await _db.SaveChangesAsync();
+
+    return NoContent();
+}
+
+public record UpdateCardProgressRequest(int Progress);
+
 
 
 }

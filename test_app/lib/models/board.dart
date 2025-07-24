@@ -1,11 +1,13 @@
 
 class TaskCard {
   final String id;
-  final String columnId;              // column FK (needed for realtime)
+  final String columnId;
   final String title;
   final String? description;
   final String? assignedUserId;
-  int position;                       // mutable for drag
+  final String? assignedUserEmail;   // <-- NEW
+  final int progressPercent;         // <-- NEW
+  int position;
 
   TaskCard({
     required this.id,
@@ -13,15 +15,19 @@ class TaskCard {
     required this.title,
     this.description,
     this.assignedUserId,
+    this.assignedUserEmail,
+    this.progressPercent = 0,
     required this.position,
   });
 
   factory TaskCard.fromJson(Map<String, dynamic> j) => TaskCard(
         id: j['id'],
-        columnId: j['columnId'],      // <- JSON must contain this
+        columnId: j['columnId'],
         title: j['title'],
         description: j['description'],
         assignedUserId: j['assignedUserId'],
+        assignedUserEmail: j['assignedUserEmail'],         // <-- NEW
+        progressPercent: j['progressPercent'] ?? 0,        // <-- NEW, fallback to 0 if absent
         position: j['position'],
       );
 
@@ -31,6 +37,8 @@ class TaskCard {
         'title': title,
         'description': description,
         'assignedUserId': assignedUserId,
+        'assignedUserEmail': assignedUserEmail,            // <-- NEW
+        'progressPercent': progressPercent,                // <-- NEW
         'position': position,
       };
 }

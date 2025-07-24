@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using WebApiWithRoleAuthentication.Data;
 
@@ -11,9 +12,11 @@ using WebApiWithRoleAuthentication.Data;
 namespace WebApiWithRoleAuthentication.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250724083130_AssignmentAndProgress")]
+    partial class AssignmentAndProgress
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -179,18 +182,18 @@ namespace WebApiWithRoleAuthentication.Migrations
                     b.HasData(
                         new
                         {
-                            Id = "32ab4f5e-3cbe-4fe3-9f10-de52188607a4",
+                            Id = "11b24105-cfbd-4366-8a0f-4675f67cf55e",
                             AccessFailedCount = 0,
-                            ConcurrencyStamp = "49f79f54-eda2-47de-ba50-cd5bb6931885",
+                            ConcurrencyStamp = "35efce6d-8747-46ec-aee1-0c2af76eee46",
                             Email = "freetrained@freetrained.com",
                             EmailConfirmed = true,
                             LockoutEnabled = false,
                             NormalizedEmail = "FREETRAINED@FREETRAINED.COM",
                             NormalizedUserName = "FREETRAINED@FREETRAINED.COM",
-                            PasswordHash = "AQAAAAIAAYagAAAAEJ4IR5uaTB3d/KxvtDdHQcsJFA977PaH7Nmfnqz2SKMjr7a93Juws+DGKoBcJsoU7A==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEAkfVvHH6ZD8x/OSeVwWV8pzv+aEDE5VnFsahhFXrX//M8WxHh5Pch+fTh5K5w+FSg==",
                             PhoneNumber = "1234567890",
                             PhoneNumberConfirmed = true,
-                            SecurityStamp = "b7e6c7c4-4b5c-43fe-8613-6df9d72b7b26",
+                            SecurityStamp = "d7d9d604-db64-454c-81b5-8e5ae9764241",
                             TwoFactorEnabled = false,
                             UserName = "freetrained@freetrained.com"
                         });
@@ -260,7 +263,7 @@ namespace WebApiWithRoleAuthentication.Migrations
                     b.HasData(
                         new
                         {
-                            UserId = "32ab4f5e-3cbe-4fe3-9f10-de52188607a4",
+                            UserId = "11b24105-cfbd-4366-8a0f-4675f67cf55e",
                             RoleId = "1"
                         });
                 });
