@@ -160,16 +160,12 @@ class _ColumnWidgetState extends State<_ColumnWidget> {
 
   /* --- draggable card helper --- */
   Widget _draggableCard(int i) {
-
   final card = _cards[i];
-  final assignedUser = widget.members.firstWhereOrNull((m) => m.userId == card.assignedUserId);
 
- print('IS LEAD: ${widget.isLead}');
-  print('MEMBER COUNT: ${widget.members.length}');
-  print('MY USER ID: ${widget.myUserId}');
-  print('CARD assignedUserId: ${card.assignedUserId}');
-  print('MEMBERS: ${widget.members.map((m) => m.email).toList()}');
+  // Destek için: kart.assignedUserIds yoksa eski kod ile çalışsın diye
+  final List<String> assignedIds = card.assignedUserIds ?? (card.assignedUserId != null ? [card.assignedUserId!] : []);
 
+  final isAssigned = assignedIds.contains(widget.myUserId) || widget.isLead;
 
   return Draggable<TaskCard>(
     data: card,
@@ -195,8 +191,7 @@ class _ColumnWidgetState extends State<_ColumnWidget> {
             Row(
               children: [
                 Expanded(
-                  child: Text(card.title,
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  child: Text(card.title, style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete_forever, color: Colors.red),
@@ -207,79 +202,105 @@ class _ColumnWidgetState extends State<_ColumnWidget> {
                 ),
               ],
             ),
-            // Assignment dropdown (for leads)
+            // Multi-assign chips (for leads)
             if (widget.isLead && widget.members.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: DropdownButton<String>(
-                  isExpanded: true,
-                  value: widget.members.any((m) => m.userId == card.assignedUserId)
-                      ? card.assignedUserId
-                      : null,
-                  hint: const Text("Assign user"),
-                  items: widget.members
-                      .map((m) => DropdownMenuItem(
-                            value: m.userId,
-                            child: Text(m.email),
-                          ))
-                      .toList(),
-                  onChanged: (selectedUserId) async {
-                    if (selectedUserId != null && selectedUserId != card.assignedUserId) {
-                      await ApiService.assignUserToCard(
-                          widget.projectId, card.id, selectedUserId);
-                      await widget.refresh();
-                    }
-                  },
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 2,
+                  children: widget.members.map((member) {
+                    final assigned = assignedIds.contains(member.userId);
+                    return FilterChip(
+                      label: Text(member.email, style: const TextStyle(fontSize: 13)),
+                      selected: assigned,
+                      onSelected: (selected) async {
+                        // Optimistic local update (görselde hemen değişsin)
+                        setState(() {
+                          if (selected) {
+                            assignedIds.add(member.userId);
+                          } else {
+                            assignedIds.remove(member.userId);
+                          }
+                        });
+                        // Backend'e bildir
+                        await ApiService.assignUserToCard(
+                          widget.projectId,
+                          card.id,
+                          member.userId,
+                          assign: selected, // assign true/false
+                        );
+                        await widget.refresh();
+                      },
+                      selectedColor: Colors.blue.shade100,
+                      showCheckmark: true,
+                    );
+                  }).toList(),
                 ),
               ),
-            // Assigned user display
-            if (assignedUser != null)
+            // Assigned user list (herkes görsün)
+            if (assignedIds.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom: 2),
                 child: Text(
-                  "Assigned: ${assignedUser.email}",
+                  "Assigned: " +
+                      widget.members
+                          .where((m) => assignedIds.contains(m.userId))
+                          .map((m) => m.email)
+                          .join(", "),
                   style: TextStyle(fontSize: 11, color: Colors.blueGrey[700]),
                 ),
               ),
-            if (assignedUser == null && card.assignedUserId != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 2),
-                child: Text(
-                  "Assigned: ${card.assignedUserId}",
-                  style: TextStyle(fontSize: 11, color: Colors.blueGrey[700]),
-                ),
-              ),
-            // Progress bar (lead or assigned user)
-            if (widget.isLead || widget.myUserId == card.assignedUserId) ...[
-              Padding(
-                padding: const EdgeInsets.only(top: 4, bottom: 2),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Slider(
-                        value: card.progressPercent.toDouble(),
-                        min: 0,
-                        max: 100,
-                        divisions: 100,
-                        label: "${card.progressPercent}%",
-                        onChanged: (v) async {
-                          await ApiService.updateCardProgress(
-                              widget.projectId, card.id, v.round());
-                          await widget.refresh();
-                        },
-                      ),
+            // Progress bar (herkes görür, sadece assigned & lead değiştirebilir)
+            Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 2),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Slider(
+                      value: card.progressPercent.toDouble(),
+                      min: 0,
+                      max: 100,
+                      divisions: 100,
+                      label: "${card.progressPercent}%",
+                      onChanged: isAssigned
+                          ? (v) async {
+                              // Optimistic update
+                              setState(() {
+                                card.progressPercent = v.round();
+                              });
+                              await ApiService.updateCardProgress(
+                                  widget.projectId, card.id, v.round());
+                              await widget.refresh();
+                            }
+                          : null,
+                      activeColor: isAssigned ? Colors.blue : Colors.grey,
+                      inactiveColor: Colors.grey.shade300,
                     ),
-                    Text("${card.progressPercent}%"),
-                  ],
-                ),
+                  ),
+                  Text("${card.progressPercent}%"),
+                ],
               ),
-            ],
+            ),
+            // Progress bar info (kimler güncelleyebilir)
+            if (!isAssigned)
+              Row(
+                children: [
+                  const Icon(Icons.lock, size: 14, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  const Text(
+                    "Only assigned or lead can update",
+                    style: TextStyle(fontSize: 10, color: Colors.grey),
+                  ),
+                ],
+              ),
           ],
         ),
       ),
     ),
   );
 }
+
 
   /* --- dialog helper --- */
   Future<String?> _newCardDialog(BuildContext ctx) async {
