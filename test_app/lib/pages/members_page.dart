@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/project.dart';
 import '../services/api_services.dart';
 
+
 class MembersPage extends StatefulWidget {
   final String projectId;
   final bool amManager;
@@ -147,11 +148,14 @@ class _MembersPageState extends State<MembersPage> {
           if (members.isEmpty) {
             return const Center(child: Text('No members found.'));
           }
-          final me = members.firstWhere(
+
+
+        final me = members.firstWhere(
             (m) => m.email == myEmail,
             orElse: () => members[0],
           );
           final isOwner = me.role == ProjectRole.lead;
+
 
           return Column(
             children: [

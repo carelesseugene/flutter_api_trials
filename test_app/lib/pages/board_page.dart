@@ -159,33 +159,127 @@ class _ColumnWidgetState extends State<_ColumnWidget> {
       );
 
   /* --- draggable card helper --- */
-  Widget _draggableCard(int i) => Draggable<TaskCard>(
-        data: _cards[i],
-        feedback: Material(
-          child: SizedBox(
-            width: 240,
-            child: Card(child: ListTile(title: Text(_cards[i].title))),
-          ),
-          elevation: 6,
-        ),
-        childWhenDragging: Opacity(
-          opacity: 0.3,
-          child: Card(child: ListTile(title: Text(_cards[i].title))),
-        ),
-        child: Card(
-          key: ValueKey(_cards[i].id),
-          child: ListTile(
-            title: Text(_cards[i].title),
-            trailing: IconButton(
-              icon: const Icon(Icons.delete_forever),
-              onPressed: () async {
-                await ApiService.deleteCard(widget.projectId, _cards[i].id);
-                await widget.refresh();
-              },
+  Widget _draggableCard(int i) {
+
+  final card = _cards[i];
+  final assignedUser = widget.members.firstWhereOrNull((m) => m.userId == card.assignedUserId);
+
+ print('IS LEAD: ${widget.isLead}');
+  print('MEMBER COUNT: ${widget.members.length}');
+  print('MY USER ID: ${widget.myUserId}');
+  print('CARD assignedUserId: ${card.assignedUserId}');
+  print('MEMBERS: ${widget.members.map((m) => m.email).toList()}');
+
+
+  return Draggable<TaskCard>(
+    data: card,
+    feedback: Material(
+      child: SizedBox(
+        width: 240,
+        child: Card(child: ListTile(title: Text(card.title))),
+      ),
+      elevation: 6,
+    ),
+    childWhenDragging: Opacity(
+      opacity: 0.3,
+      child: Card(child: ListTile(title: Text(card.title))),
+    ),
+    child: Card(
+      key: ValueKey(card.id),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Title + Delete
+            Row(
+              children: [
+                Expanded(
+                  child: Text(card.title,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_forever, color: Colors.red),
+                  onPressed: () async {
+                    await ApiService.deleteCard(widget.projectId, card.id);
+                    await widget.refresh();
+                  },
+                ),
+              ],
             ),
-          ),
+            // Assignment dropdown (for leads)
+            if (widget.isLead && widget.members.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: DropdownButton<String>(
+                  isExpanded: true,
+                  value: widget.members.any((m) => m.userId == card.assignedUserId)
+                      ? card.assignedUserId
+                      : null,
+                  hint: const Text("Assign user"),
+                  items: widget.members
+                      .map((m) => DropdownMenuItem(
+                            value: m.userId,
+                            child: Text(m.email),
+                          ))
+                      .toList(),
+                  onChanged: (selectedUserId) async {
+                    if (selectedUserId != null && selectedUserId != card.assignedUserId) {
+                      await ApiService.assignUserToCard(
+                          widget.projectId, card.id, selectedUserId);
+                      await widget.refresh();
+                    }
+                  },
+                ),
+              ),
+            // Assigned user display
+            if (assignedUser != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Text(
+                  "Assigned: ${assignedUser.email}",
+                  style: TextStyle(fontSize: 11, color: Colors.blueGrey[700]),
+                ),
+              ),
+            if (assignedUser == null && card.assignedUserId != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Text(
+                  "Assigned: ${card.assignedUserId}",
+                  style: TextStyle(fontSize: 11, color: Colors.blueGrey[700]),
+                ),
+              ),
+            // Progress bar (lead or assigned user)
+            if (widget.isLead || widget.myUserId == card.assignedUserId) ...[
+              Padding(
+                padding: const EdgeInsets.only(top: 4, bottom: 2),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Slider(
+                        value: card.progressPercent.toDouble(),
+                        min: 0,
+                        max: 100,
+                        divisions: 100,
+                        label: "${card.progressPercent}%",
+                        onChanged: (v) async {
+                          await ApiService.updateCardProgress(
+                              widget.projectId, card.id, v.round());
+                          await widget.refresh();
+                        },
+                      ),
+                    ),
+                    Text("${card.progressPercent}%"),
+                  ],
+                ),
+              ),
+            ],
+          ],
         ),
-      );
+      ),
+    ),
+  );
+}
 
   /* --- dialog helper --- */
   Future<String?> _newCardDialog(BuildContext ctx) async {
@@ -209,7 +303,8 @@ class _ColumnWidgetState extends State<_ColumnWidget> {
 class _BoardPageState extends ConsumerState<BoardPage> {
   // ─────────────────────────── fields ───────────────────────────
   late RealtimeService _rt;
-  late Future<ProjectDetails?> _projectFuture;
+  late Future<ProjectDetails?> _projectFuture = Future.value(null);
+
   ProjectDetails? _details;
 
   String _myUserId = '';   // current user id
@@ -232,14 +327,23 @@ class _BoardPageState extends ConsumerState<BoardPage> {
     _loadUserAndProject();
   }
 
-  Future<void> _loadUserAndProject() async {
-    /* ----- current user id ----- */
-    final prefs  = await SharedPreferences.getInstance();
-    final token  = prefs.getString('token');
-    if (token != null) {
-      final claims = JwtDecoder.decode(token);
-      _myUserId = (claims['sub'] ?? claims['nameid'] ?? '').toString();
-    }
+ Future<void> _loadUserAndProject() async {
+  /* ----- current user id ----- */
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('token');
+
+  if (token != null) {
+    final claims = JwtDecoder.decode(token);
+    // Use the actual key for userId from your JWT claims
+    _myUserId = (claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] ?? '').toString();
+
+    print('Loaded userId: $_myUserId from token: $token');
+    print('Token claims: $claims');
+  } else {
+    _myUserId = '';
+    print('No token found!');
+  }
+
 
     /* ----- project details ----- */
     _projectFuture = ApiService.getProjectDetails(widget.projectId);
@@ -249,7 +353,7 @@ class _BoardPageState extends ConsumerState<BoardPage> {
       final me = _details!.members.firstWhereOrNull((m) => m.userId == _myUserId);
       _isLead = me != null && me.role == ProjectRole.lead;
     }
-
+      
     if (mounted) setState(() {});
   }
 
