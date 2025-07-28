@@ -43,11 +43,19 @@ namespace WebApiWithRoleAuthentication.Data
             builder.Entity<BoardColumn>()
                 .HasIndex(c => new { c.ProjectId, c.Position })
                 .IsUnique();
-            builder.Entity<TaskCard>()
-                .HasOne(c => c.AssignedUser)
-                .WithMany()
-                .HasForeignKey(c => c.AssignedUserId)
-                .OnDelete(DeleteBehavior.SetNull);
+            builder.Entity<TaskCardAssignment>()
+                .HasKey(a => new { a.TaskCardId, a.UserId });
+
+            builder.Entity<TaskCardAssignment>()
+                .HasOne(a => a.TaskCard)
+                .WithMany(t => t.Assignments)
+                .HasForeignKey(a => a.TaskCardId);
+
+            builder.Entity<TaskCardAssignment>()
+                .HasOne(a => a.User)
+                .WithMany() // No need for back navigation
+                .HasForeignKey(a => a.UserId);
+
             builder.Entity<IdentityRole>().HasData(
                 new IdentityRole { Id = "1", Name = "Admin", NormalizedName = "ADMIN" },
                 new IdentityRole { Id = "2", Name = "User", NormalizedName = "USER" }

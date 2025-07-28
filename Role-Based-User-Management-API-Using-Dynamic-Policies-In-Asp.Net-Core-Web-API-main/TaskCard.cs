@@ -8,8 +8,8 @@ public class TaskCard
 
     public string Title   { get; set; } = default!;
     public string? Description { get; set; }
-    public string? AssignedUserId { get; set; }      
-    public IdentityUser? AssignedUser { get; set; }
+    public ICollection<TaskCardAssignment> Assignments { get; set; } = new List<TaskCardAssignment>();
+
 
     public int    Position { get; set; }             
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
