@@ -2,11 +2,13 @@ import 'package:signalr_core/signalr_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../models/board.dart';
+//import '../models/board.dart';
 import '../models/notification.dart';
 import '../providers/board_provider.dart';
 import '../providers/notification_provider.dart';
 import 'api_services.dart';
+import '../models/task_card.dart';  
+
 
 final realtimeServiceProvider = Provider<RealtimeService>((ref) => RealtimeService());
 

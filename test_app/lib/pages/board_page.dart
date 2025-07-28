@@ -2,16 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:collection/collection.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
-import 'package:shared_preferences/shared_preferences.dart';                     // realtimeServiceProvider
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/board.dart';
 import '../models/project.dart';
 import '../models/notification.dart';
+import '../models/task_card.dart';
 import '../services/realtime_service.dart';
 import '../services/api_services.dart';
 import '../providers/board_provider.dart';
 import '../providers/notification_provider.dart';
 import '../pages/notifications_page.dart';
 import '../pages/members_page.dart';
+import '../widgets/card_assignment_editor.dart';
 
 class BoardPage extends ConsumerStatefulWidget {
   final String projectId;
@@ -33,7 +35,6 @@ class _ColumnWidget extends StatefulWidget {
   final BoardColumn column;
   final String projectId;
   final Future<void> Function() refresh;
-  // NEW ↓
   final List<MemberDto> members;
   final bool isLead;
   final String myUserId;
@@ -42,9 +43,9 @@ class _ColumnWidget extends StatefulWidget {
     required this.column,
     required this.projectId,
     required this.refresh,
-    required this.members,   // NEW
-    required this.isLead,    // NEW
-    required this.myUserId,  // NEW
+    required this.members,
+    required this.isLead,
+    required this.myUserId,
     Key? key,
   }) : super(key: key);
   @override
@@ -53,6 +54,7 @@ class _ColumnWidget extends StatefulWidget {
 
 class _ColumnWidgetState extends State<_ColumnWidget> {
   late List<TaskCard> _cards;
+  final Map<String, int> _sliderProgress = {}; // For local slider values
 
   @override
   void initState() {
@@ -158,151 +160,130 @@ class _ColumnWidgetState extends State<_ColumnWidget> {
         ),
       );
 
-  /* --- draggable card helper --- */
   Widget _draggableCard(int i) {
-  final card = _cards[i];
+    final card = _cards[i];
+    final assignedIds = card.assignedUsers.map((u) => u.userId).toSet();
+    final isAssigned = assignedIds.contains(widget.myUserId);
+    final sliderValue = _sliderProgress[card.id] ?? card.progressPercent;
 
-  // Destek için: kart.assignedUserIds yoksa eski kod ile çalışsın diye
-  final List<String> assignedIds = card.assignedUserIds ?? (card.assignedUserId != null ? [card.assignedUserId!] : []);
-
-  final isAssigned = assignedIds.contains(widget.myUserId) || widget.isLead;
-
-  return Draggable<TaskCard>(
-    data: card,
-    feedback: Material(
-      child: SizedBox(
-        width: 240,
+    return Draggable<TaskCard>(
+      data: card,
+      feedback: Material(
+        child: SizedBox(
+          width: 240,
+          child: Card(child: ListTile(title: Text(card.title))),
+        ),
+        elevation: 6,
+      ),
+      childWhenDragging: Opacity(
+        opacity: 0.3,
         child: Card(child: ListTile(title: Text(card.title))),
       ),
-      elevation: 6,
-    ),
-    childWhenDragging: Opacity(
-      opacity: 0.3,
-      child: Card(child: ListTile(title: Text(card.title))),
-    ),
-    child: Card(
-      key: ValueKey(card.id),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Title + Delete
-            Row(
-              children: [
-                Expanded(
-                  child: Text(card.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete_forever, color: Colors.red),
-                  onPressed: () async {
-                    await ApiService.deleteCard(widget.projectId, card.id);
-                    await widget.refresh();
-                  },
-                ),
-              ],
-            ),
-            // Multi-assign chips (for leads)
-            if (widget.isLead && widget.members.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Wrap(
-                  spacing: 6,
-                  runSpacing: 2,
-                  children: widget.members.map((member) {
-                    final assigned = assignedIds.contains(member.userId);
-                    return FilterChip(
-                      label: Text(member.email, style: const TextStyle(fontSize: 13)),
-                      selected: assigned,
-                      onSelected: (selected) async {
-                        // Optimistic local update (görselde hemen değişsin)
-                        setState(() {
-                          if (selected) {
-                            assignedIds.add(member.userId);
-                          } else {
-                            assignedIds.remove(member.userId);
-                          }
-                        });
-                        // Backend'e bildir
-                        await ApiService.assignUserToCard(
-                          widget.projectId,
-                          card.id,
-                          member.userId,
-                          assign: selected, // assign true/false
+      child: Card(
+        key: ValueKey(card.id),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Title + Delete + Assign button if lead
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(card.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                  if (widget.isLead)
+                    IconButton(
+                      icon: const Icon(Icons.group_add, color: Colors.blue),
+                      tooltip: "Assign Members",
+                      onPressed: () async {
+                        await showDialog(
+                          context: context,
+                          builder: (_) => AlertDialog(
+                            title: const Text("Assign Members"),
+                            content: CardAssignmentEditor(
+                              projectId: widget.projectId,
+                              card: card,
+                              allMembers: widget.members,
+                            ),
+                          ),
                         );
                         await widget.refresh();
                       },
-                      selectedColor: Colors.blue.shade100,
-                      showCheckmark: true,
-                    );
-                  }).toList(),
-                ),
-              ),
-            // Assigned user list (herkes görsün)
-            if (assignedIds.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 2),
-                child: Text(
-                  "Assigned: " +
-                      widget.members
-                          .where((m) => assignedIds.contains(m.userId))
-                          .map((m) => m.email)
-                          .join(", "),
-                  style: TextStyle(fontSize: 11, color: Colors.blueGrey[700]),
-                ),
-              ),
-            // Progress bar (herkes görür, sadece assigned & lead değiştirebilir)
-            Padding(
-              padding: const EdgeInsets.only(top: 4, bottom: 2),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Slider(
-                      value: card.progressPercent.toDouble(),
-                      min: 0,
-                      max: 100,
-                      divisions: 100,
-                      label: "${card.progressPercent}%",
-                      onChanged: isAssigned
-                          ? (v) async {
-                              // Optimistic update
-                              setState(() {
-                                card.progressPercent = v.round();
-                              });
-                              await ApiService.updateCardProgress(
-                                  widget.projectId, card.id, v.round());
-                              await widget.refresh();
-                            }
-                          : null,
-                      activeColor: isAssigned ? Colors.blue : Colors.grey,
-                      inactiveColor: Colors.grey.shade300,
                     ),
-                  ),
-                  Text("${card.progressPercent}%"),
-                ],
-              ),
-            ),
-            // Progress bar info (kimler güncelleyebilir)
-            if (!isAssigned)
-              Row(
-                children: [
-                  const Icon(Icons.lock, size: 14, color: Colors.grey),
-                  const SizedBox(width: 4),
-                  const Text(
-                    "Only assigned or lead can update",
-                    style: TextStyle(fontSize: 10, color: Colors.grey),
+                  IconButton(
+                    icon: const Icon(Icons.delete_forever, color: Colors.red),
+                    onPressed: () async {
+                      await ApiService.deleteCard(widget.projectId, card.id);
+                      await widget.refresh();
+                    },
                   ),
                 ],
               ),
-          ],
+              // Assigned user list (everyone sees)
+              if (card.assignedUsers.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Text(
+                    "Assigned: " +
+                        card.assignedUsers.map((u) => u.email).join(", "),
+                    style: TextStyle(fontSize: 11, color: Colors.blueGrey[700]),
+                  ),
+                ),
+              // Progress bar (assigned users only)
+              Padding(
+                padding: const EdgeInsets.only(top: 4, bottom: 2),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Slider(
+                        value: sliderValue.toDouble(),
+                        min: 0,
+                        max: 100,
+                        divisions: 100,
+                        label: "$sliderValue%",
+                        onChanged: isAssigned
+                            ? (v) {
+                                setState(() {
+                                  _sliderProgress[card.id] = v.round();
+                                });
+                              }
+                            : null,
+                        onChangeEnd: isAssigned
+                            ? (v) async {
+                                await ApiService.updateCardProgress(
+                                    widget.projectId, card.id, v.round());
+                                await widget.refresh();
+                                setState(() => _sliderProgress.remove(card.id));
+                              }
+                            : null,
+                        activeColor: isAssigned ? Colors.blue : Colors.grey,
+                        inactiveColor: Colors.grey.shade300,
+                      ),
+                    ),
+                    Text("$sliderValue%"),
+                  ],
+                ),
+              ),
+              // Progress bar info (only assigned users can edit)
+              if (!isAssigned)
+                Row(
+                  children: [
+                    const Icon(Icons.lock, size: 14, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    const Text(
+                      "Only assigned can update",
+                      style: TextStyle(fontSize: 10, color: Colors.grey),
+                    ),
+                  ],
+                ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
-
-  /* --- dialog helper --- */
   Future<String?> _newCardDialog(BuildContext ctx) async {
     final c = TextEditingController();
     return showDialog<String>(
@@ -321,22 +302,21 @@ class _ColumnWidgetState extends State<_ColumnWidget> {
   }
 }
 
+
+// --- BoardPageState unchanged except for _ColumnWidget usage ---
+
 class _BoardPageState extends ConsumerState<BoardPage> {
-  // ─────────────────────────── fields ───────────────────────────
   late RealtimeService _rt;
   late Future<ProjectDetails?> _projectFuture = Future.value(null);
 
   ProjectDetails? _details;
+  String _myUserId = '';
+  bool _isLead = false;
 
-  String _myUserId = '';   // current user id
-  bool   _isLead   = false; // am I project lead?
-
-  // ─────────────────────────── lifecycle ───────────────────────────
   @override
   void initState() {
     super.initState();
 
-    // realtime
     _rt = ref.read(realtimeServiceProvider);
     _rt.connectBoard(ref, widget.projectId).catchError((e) {
       if (mounted) {
@@ -348,25 +328,16 @@ class _BoardPageState extends ConsumerState<BoardPage> {
     _loadUserAndProject();
   }
 
- Future<void> _loadUserAndProject() async {
-  /* ----- current user id ----- */
-  final prefs = await SharedPreferences.getInstance();
-  final token = prefs.getString('token');
+  Future<void> _loadUserAndProject() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    if (token != null) {
+      final claims = JwtDecoder.decode(token);
+      _myUserId = (claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] ?? '').toString();
+    } else {
+      _myUserId = '';
+    }
 
-  if (token != null) {
-    final claims = JwtDecoder.decode(token);
-    // Use the actual key for userId from your JWT claims
-    _myUserId = (claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] ?? '').toString();
-
-    print('Loaded userId: $_myUserId from token: $token');
-    print('Token claims: $claims');
-  } else {
-    _myUserId = '';
-    print('No token found!');
-  }
-
-
-    /* ----- project details ----- */
     _projectFuture = ApiService.getProjectDetails(widget.projectId);
     _details = await _projectFuture;
 
@@ -374,20 +345,18 @@ class _BoardPageState extends ConsumerState<BoardPage> {
       final me = _details!.members.firstWhereOrNull((m) => m.userId == _myUserId);
       _isLead = me != null && me.role == ProjectRole.lead;
     }
-      
+
     if (mounted) setState(() {});
   }
 
-  // ─────────────────────────── UI ───────────────────────────
   @override
   Widget build(BuildContext context) {
     final boardAsync = ref.watch(boardProvider(widget.projectId));
 
     return Scaffold(
-      appBar:AppBar(
+      appBar: AppBar(
         title: Text(widget.projectName),
         actions: [
-          /* -------- bell -------- */
           Consumer(builder: (context, ref, _) {
             final unread = ref
                 .watch(notificationsProvider)
@@ -421,7 +390,6 @@ class _BoardPageState extends ConsumerState<BoardPage> {
               },
             );
           }),
-          /* -------- members -------- */
           IconButton(
             tooltip: 'Members',
             icon: const Icon(Icons.group),
@@ -433,19 +401,15 @@ class _BoardPageState extends ConsumerState<BoardPage> {
                 );
                 return;
               }
-
-              final prefs  = await SharedPreferences.getInstance();
-              final token  = prefs.getString('token');
+              final prefs = await SharedPreferences.getInstance();
+              final token = prefs.getString('token');
               final claims = JwtDecoder.decode(token!);
-              final uid    = claims['sub'] ?? claims['nameid'];
-              final email  = claims['email'];
-
+              final uid = claims['sub'] ?? claims['nameid'];
+              final email = claims['email'];
               final me = _details!.members.firstWhereOrNull(
                 (m) => m.userId == uid || m.email.toLowerCase() == email.toLowerCase(),
               );
-
               final amManager = me != null && me.role == ProjectRole.lead;
-
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -462,7 +426,6 @@ class _BoardPageState extends ConsumerState<BoardPage> {
       ),
       body: Column(
         children: [
-          /* ----- project header card ----- */
           FutureBuilder<ProjectDetails?>(
             future: _projectFuture,
             builder: (_, snap) {
@@ -491,7 +454,6 @@ class _BoardPageState extends ConsumerState<BoardPage> {
               );
             },
           ),
-          /* ----- board ----- */
           Expanded(
             child: boardAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -515,7 +477,6 @@ class _BoardPageState extends ConsumerState<BoardPage> {
     );
   }
 
-  // ─────────────────────────── helpers ───────────────────────────
   Widget _buildBoard(List<BoardColumn> cols) => ScrollConfiguration(
         behavior: const ScrollBehavior().copyWith(scrollbars: true),
         child: ListView.separated(
@@ -530,8 +491,8 @@ class _BoardPageState extends ConsumerState<BoardPage> {
             refresh: () => ref
                 .read(boardProvider(widget.projectId).notifier)
                 .refresh(),
-            members : _details?.members ?? [],
-            isLead  : _isLead,
+            members: _details?.members ?? [],
+            isLead: _isLead,
             myUserId: _myUserId,
           ),
         ),

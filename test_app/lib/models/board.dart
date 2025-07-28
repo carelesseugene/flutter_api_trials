@@ -1,53 +1,12 @@
+import 'task_card.dart';
 
-class TaskCard {
-  final String id;
-  final String columnId;
-  final String title;
-  final String? description;
-  final String? assignedUserId;
-  final String? assignedUserEmail;   // <-- NEW
-  final int progressPercent;         // <-- NEW
-  int position;
-
-  TaskCard({
-    required this.id,
-    required this.columnId,
-    required this.title,
-    this.description,
-    this.assignedUserId,
-    this.assignedUserEmail,
-    this.progressPercent = 0,
-    required this.position,
-  });
-
-  factory TaskCard.fromJson(Map<String, dynamic> j) => TaskCard(
-        id: j['id'],
-        columnId: j['columnId'],
-        title: j['title'],
-        description: j['description'],
-        assignedUserId: j['assignedUserId'],
-        assignedUserEmail: j['assignedUserEmail'],         // <-- NEW
-        progressPercent: j['progressPercent'] ?? 0,        // <-- NEW, fallback to 0 if absent
-        position: j['position'],
-      );
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'columnId': columnId,
-        'title': title,
-        'description': description,
-        'assignedUserId': assignedUserId,
-        'assignedUserEmail': assignedUserEmail,            // <-- NEW
-        'progressPercent': progressPercent,                // <-- NEW
-        'position': position,
-      };
-}
-
+// BoardColumn represents a column in the Kanban board.
+// Each column holds a list of TaskCard objects.
 class BoardColumn {
   final String id;
   final String title;
   int position;
-  List<TaskCard> cards;               // generic List<TaskCard>
+  List<TaskCard> cards;
 
   BoardColumn({
     required this.id,

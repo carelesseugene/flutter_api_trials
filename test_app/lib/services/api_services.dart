@@ -7,6 +7,7 @@ import '../models/board.dart';
 import '../models/notification.dart';
 import '../models/project.dart';
 import '../models/user.dart';
+import '../models/task_card.dart';
 
 class ApiService {
   static const _host    = 'http://10.0.2.2:5129';
@@ -255,8 +256,8 @@ static Future<void> removeMember(String projectId, String userId) async {
 }
 
 // Assign a user to a card
-static Future<void> assignUserToCard(String projectId, String cardId, String userId) async {
-  final res = await _post('projects/$projectId/cards/$cardId/assign', body: {'userId': userId});
+static Future<void> assignUsersToCard(String projectId, String cardId, List<String> userIds) async {
+  final res = await _post('projects/$projectId/cards/$cardId/assign', body: {'userIds': userIds});
   if (res.statusCode != 204) throw Exception(res.body);
 }
 
