@@ -254,16 +254,83 @@ class _ColumnWidgetState extends State<_ColumnWidget> {
               ),
               // Progress bar info (only assigned users can edit)
               if (!isAssigned)
-                Row(
-                  children: [
-                    const Icon(Icons.lock, size: 14, color: Colors.grey),
-                    const SizedBox(width: 4),
-                    const Text(
-                      "Only assigned can update",
-                      style: TextStyle(fontSize: 10, color: Colors.grey),
-                    ),
-                  ],
-                ),
+                // ... existing progress bar code ...
+Padding(
+  padding: const EdgeInsets.only(top: 4, bottom: 2),
+  child: Row(
+    children: [
+      Expanded(
+        child: Slider(
+          value: sliderValue.toDouble(),
+          min: 0,
+          max: 100,
+          divisions: 100,
+          label: "$sliderValue%",
+          onChanged: isAssigned && sliderValue < 100
+              ? (v) {
+                  setState(() {
+                    _sliderProgress[card.id] = v.round();
+                  });
+                }
+              : null,
+          onChangeEnd: isAssigned && sliderValue < 100
+              ? (v) async {
+                  await ApiService.updateCardProgress(
+                      widget.projectId, card.id, v.round());
+                  await widget.refresh();
+                  setState(() => _sliderProgress.remove(card.id));
+                }
+              : null,
+          activeColor: isAssigned ? Colors.blue : Colors.grey,
+          inactiveColor: Colors.grey.shade300,
+        ),
+      ),
+      Text("$sliderValue%"),
+    ],
+  ),
+),
+
+// --- Mark as Done / Completed button ---
+if (isAssigned)
+  Padding(
+    padding: const EdgeInsets.only(top: 2),
+    child: sliderValue < 100
+        ? ElevatedButton.icon(
+            icon: const Icon(Icons.check_circle_outline),
+            label: const Text("Mark as Done"),
+            style: ElevatedButton.styleFrom(
+              minimumSize: const Size(0, 32),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+            ),
+            onPressed: () async {
+              setState(() => _sliderProgress[card.id] = 100);
+              await ApiService.updateCardProgress(
+                  widget.projectId, card.id, 100);
+              await widget.refresh();
+              setState(() => _sliderProgress.remove(card.id));
+            },
+          )
+        : Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green[700], size: 20),
+              const SizedBox(width: 4),
+              Text("Completed!", style: TextStyle(color: Colors.green[700])),
+              // If you want a "Reopen" button:
+               TextButton(
+                 onPressed: () async {
+                   setState(() => _sliderProgress[card.id] = 0);
+                   await ApiService.updateCardProgress(
+                       widget.projectId, card.id, 0);
+                   await widget.refresh();
+                   setState(() => _sliderProgress.remove(card.id));
+                 },
+                 child: Text("Reopen"),
+               )
+            ],
+          ),
+  ),
+
             ],
           ),
         ),
