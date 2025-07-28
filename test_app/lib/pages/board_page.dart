@@ -53,22 +53,9 @@ class _ColumnWidget extends StatefulWidget {
 }
 
 class _ColumnWidgetState extends State<_ColumnWidget> {
-  late List<TaskCard> _cards;
   final Map<String, int> _sliderProgress = {}; // For local slider values
 
-  @override
-  void initState() {
-    super.initState();
-    _cards = [...widget.column.cards];
-  }
 
-  @override
-  void didUpdateWidget(covariant _ColumnWidget old) {
-    super.didUpdateWidget(old);
-    if (old.column.cards.length != widget.column.cards.length) {
-      setState(() => _cards = [...widget.column.cards]);
-    }
-  }
 
   @override
   Widget build(BuildContext context) => Container(
@@ -133,12 +120,12 @@ class _ColumnWidgetState extends State<_ColumnWidget> {
                     projectId: widget.projectId,
                     cardId: card.id,
                     targetColumnId: widget.column.id,
-                    newPosition: _cards.length,
+                    newPosition: widget.column.cards.length,
                   );
                   await widget.refresh();
                 },
                 builder: (_, __, ___) => ListView.builder(
-                  itemCount: _cards.length,
+                  itemCount: widget.column.cards.length,
                   itemBuilder: (_, i) => _draggableCard(i),
                 ),
               ),
@@ -161,7 +148,7 @@ class _ColumnWidgetState extends State<_ColumnWidget> {
       );
 
   Widget _draggableCard(int i) {
-    final card = _cards[i];
+    final card = widget.column.cards[i];
     final assignedIds = card.assignedUsers.map((u) => u.userId).toSet();
     final isAssigned = assignedIds.contains(widget.myUserId);
     final sliderValue = _sliderProgress[card.id] ?? card.progressPercent;
