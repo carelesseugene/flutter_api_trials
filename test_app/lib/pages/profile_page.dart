@@ -13,6 +13,9 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   User? user;
   final phoneController = TextEditingController();
+  final fullNameController = TextEditingController();
+  final titleController = TextEditingController();
+  final positionController = TextEditingController();
 
   @override
   void initState() {
@@ -33,6 +36,9 @@ class _ProfilePageState extends State<ProfilePage> {
     final ok = await ApiService.updateProfile(
       email: user!.email,
       phone: phoneController.text.trim(),
+      fullName: fullNameController.text.trim(),
+      title: titleController.text.trim(),
+      position: positionController.text.trim(),
     );
     if (ok) _load(); // refresh profile after update
   }
@@ -65,6 +71,10 @@ class _ProfilePageState extends State<ProfilePage> {
           TextField(
               controller: phoneController,
               decoration: const InputDecoration(labelText: 'Telefon No', prefixText: '+')),
+          TextField(controller: fullNameController, decoration: InputDecoration(labelText: 'Ad - Soyad')),
+          TextField(controller: titleController, decoration: InputDecoration(labelText: 'Unvan')),
+          TextField(controller: positionController, decoration: InputDecoration(labelText: 'Pozisyon')),
+
           const SizedBox(height: 12),
           ElevatedButton(onPressed: _update, child: const Text('Güncelle')),
           ElevatedButton.icon(

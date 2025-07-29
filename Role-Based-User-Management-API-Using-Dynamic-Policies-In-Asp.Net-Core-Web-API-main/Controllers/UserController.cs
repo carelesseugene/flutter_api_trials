@@ -3,55 +3,70 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using WebApiWithRoleAuthentication.Models;
+using WebApiWithRoleAuthentication.Data;
 
 namespace WebApiWithRoleAuthentication.Controllers
+
+
+
 {
     [Route("api/[controller]")]
     [ApiController]
     [Authorize(Policy = "RoleUser")]
     public class UserController : ControllerBase
     {
-        private readonly UserManager<IdentityUser> userManager;
 
-        public UserController(UserManager<IdentityUser> userManager)
+        private readonly UserManager<IdentityUser> userManager;
+        private readonly AppDbContext db;
+
+        public UserController(UserManager<IdentityUser> userManager, AppDbContext db)
         {
             this.userManager = userManager;
+            this.db = db;
         }
+
 
         [HttpPost("user-info")]
         public async Task<IActionResult> GetUserInfo([FromBody] string email)
         {
             var user = await userManager.FindByEmailAsync(email);
-            if (user == null)
+            if (user == null) return NotFound();
+
+            var profile = await db.UserProfiles.FindAsync(user.Id);
+
+            return Ok(new
             {
-                return NotFound(new { message = "User not found." });
-            }
-
-            var roles = await userManager.GetRolesAsync(user);
-
-            return Ok(new { user.Id, user.Email, user.PhoneNumber, roles });
+                id = user.Id,
+                email = user.Email,
+                phoneNumber = user.PhoneNumber,
+                fullName = profile?.FullName ?? "",
+                title = profile?.Title ?? "",
+                position = profile?.Position ?? ""
+            });
         }
+
 
         [HttpPut("user-info")]
         public async Task<IActionResult> UpdateUserInfo([FromBody] UpdateUserInfo model)
         {
             var user = await userManager.FindByEmailAsync(model.Email);
-            if (user == null)
-            {
-                return NotFound(new { message = "User not found." });
-            }
+            if (user == null) return NotFound();
 
-            user.Email = model.Email;
-            user.UserName = model.Email;
             user.PhoneNumber = model.PhoneNumber;
+            await userManager.UpdateAsync(user);
 
-            var result = await userManager.UpdateAsync(user);
-            if (result.Succeeded)
+   
+            var profile = await db.UserProfiles.FindAsync(user.Id);
+            if (profile != null)
             {
-                return Ok(new { message = "User Info Updated Successfully." });
+                profile.FullName = model.FullName;
+                profile.Title = model.Title;
+                profile.Position = model.Position;
+                profile.PhoneNumber = model.PhoneNumber;
+                await db.SaveChangesAsync();
             }
 
-            return BadRequest(result.Errors);
+            return Ok();
         }
 
         [HttpDelete("delete-user")]

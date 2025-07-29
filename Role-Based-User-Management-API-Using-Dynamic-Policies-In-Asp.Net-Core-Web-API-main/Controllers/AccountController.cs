@@ -6,7 +6,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using WebApiWithRoleAuthentication.Models;
-
+using WebApiWithRoleAuthentication.Data;
 namespace WebApiWithRoleAuthentication.Controllers
 {
     [Route("api/[controller]")]
@@ -37,7 +37,7 @@ namespace WebApiWithRoleAuthentication.Controllers
                 return BadRequest(new { message = "Email already exists." });
             }
 
-            var user = new IdentityUser { UserName = model.Email, Email = model.Email, PhoneNumber = model.phoneNumber };
+            var user = new IdentityUser { UserName = model.Email, Email = model.Email, PhoneNumber = model.PhoneNumber };
 
             var result = await _userManager.CreateAsync(user, model.Password);
 
@@ -54,6 +54,17 @@ namespace WebApiWithRoleAuthentication.Controllers
                 }
 
                 await _userManager.AddToRoleAsync(user, "User");
+                var db = HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+                db.UserProfiles.Add(new UserProfile
+                {
+                    UserId      = user.Id,
+                    FullName    = model.FullName,
+                    PhoneNumber = model.PhoneNumber,
+                    Title       = model.Title,
+                    Position    = model.Position,
+                    Email       = model.Email
+                });
+                await db.SaveChangesAsync();
 
                 return Ok(new { message = "User registered successfully" });
             }

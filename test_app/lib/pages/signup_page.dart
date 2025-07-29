@@ -11,6 +11,9 @@ class SignupPage extends ConsumerStatefulWidget {
 }
 
 class _SignupPageState extends ConsumerState<SignupPage> {
+  final fullNameController = TextEditingController();
+  final titleController = TextEditingController();
+  final positionController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final phoneController = TextEditingController();
@@ -18,6 +21,9 @@ class _SignupPageState extends ConsumerState<SignupPage> {
 
   Future<void> _signup() async {
     final ok = await ApiService.signup(
+      fullName: fullNameController.text.trim(),
+      title: titleController.text.trim(),
+      position: positionController.text.trim(),
       email: emailController.text.trim(),
       password: passwordController.text,
       phone: phoneController.text,
@@ -45,6 +51,18 @@ class _SignupPageState extends ConsumerState<SignupPage> {
               controller: passwordController,
               obscureText: true,
               decoration: const InputDecoration(labelText: 'Şifre')),
+          TextField(
+              controller: fullNameController,
+              decoration: InputDecoration(labelText: 'Ad - Soyad'),
+            ),
+            TextField(
+              controller: titleController,
+              decoration: InputDecoration(labelText: 'Unvan'),
+            ),
+            TextField(
+              controller: positionController,
+              decoration: InputDecoration(labelText: 'Pozisyon'),
+            ),
           TextField(
               controller: phoneController,
               decoration: const InputDecoration(labelText: 'Telefon No')),

@@ -13,6 +13,8 @@ namespace WebApiWithRoleAuthentication.Data
         public DbSet<TaskCard>     TaskCards      => Set<TaskCard>();
         public DbSet<Notification> Notifications  => Set<Notification>();
         public DbSet<ProjectInvitation> ProjectInvitations => Set<ProjectInvitation>();
+        public DbSet<UserProfile> UserProfiles { get; set; }
+
 
         public AppDbContext(DbContextOptions options) : base(options)
         {

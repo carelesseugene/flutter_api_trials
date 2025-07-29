@@ -56,7 +56,7 @@ namespace WebApiWithRoleAuthentication.Controllers
                 return BadRequest(new { message = "Email already exists." });
             }
 
-            var user = new IdentityUser { UserName = model.Email, Email = model.Email, PhoneNumber = model.phoneNumber };
+            var user = new IdentityUser { UserName = model.Email, Email = model.Email, PhoneNumber = model.PhoneNumber };
             var result = await userManager.CreateAsync(user, model.Password);
             if (result.Succeeded)
             {

@@ -86,28 +86,34 @@ class ApiService {
   }
 
   static Future<bool> signup({
-    required String email,
-    required String password,
-    required String phone,
-  }) async {
-    final res = await http.post(
-      Uri.parse('$baseUrl/Account/register'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'email': email,
-        'password': password,
-        'phoneNumber': phone,
-      }),
-    );
+      required String email,
+      required String password,
+      required String phone,
+      required String fullName,
+      required String title,
+      required String position,
+    }) async {
+      final res = await http.post(
+        Uri.parse('$baseUrl/Account/register'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'password': password,
+          'phoneNumber': phone,
+          'fullName': fullName,
+          'title': title,
+          'position': position,
+        }),
+      );
+      if (res.statusCode == 200) {
+        final token = jsonDecode(res.body)['token'];
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('token', token);
+        return true;
+      }
+      return false;
+}
 
-    if (res.statusCode == 200) {
-      final token = jsonDecode(res.body)['token'];
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('token', token);
-      return true;
-    }
-    return false;
-  }
 
   static Future<void> logout() async =>
       (await SharedPreferences.getInstance()).remove('token');
@@ -150,22 +156,31 @@ class ApiService {
   }
 
   static Future<bool> updateProfile({
-    required String email,
-    required String phone,
-  }) async {
-    final token = await _getToken();
-    if (token == null) return false;
+  required String email,
+  required String phone,
+  required String fullName,
+  required String title,
+  required String position,
+}) async {
+  final token = await _getToken();
+  if (token == null) return false;
 
-    final res = await http.put(
-      Uri.parse('$baseUrl/User/user-info'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({'email': email, 'phoneNumber': phone}),
-    );
-    return res.statusCode == 200;
-  }
+  final res = await http.put(
+    Uri.parse('$baseUrl/User/user-info'),
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    },
+    body: jsonEncode({
+      'email': email,
+      'phoneNumber': phone,
+      'fullName': fullName,
+      'title': title,
+      'position': position,
+    }),
+  );
+  return res.statusCode == 200;
+}
 
   /* ==============================================================
      PROJECTS
