@@ -9,6 +9,7 @@ using WebApiWithRoleAuthentication.Models;
 using WebApiWithRoleAuthentication.Data;
 namespace WebApiWithRoleAuthentication.Controllers
 {
+
     [Route("api/[controller]")]
     [ApiController]
     public class AccountController : ControllerBase
@@ -16,6 +17,32 @@ namespace WebApiWithRoleAuthentication.Controllers
         private readonly UserManager<IdentityUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IConfiguration _configuration;
+
+
+        private string GenerateJwt(IdentityUser user, IList<string> roles)
+    {
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, user.Id),
+            new(JwtRegisteredClaimNames.Name,  user.UserName!),
+            new(JwtRegisteredClaimNames.Jti,   Guid.NewGuid().ToString()),
+            new(JwtRegisteredClaimNames.Email, user.Email!)
+        };
+        claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
+
+        var key   = new SymmetricSecurityKey(
+                        Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var token = new JwtSecurityToken(
+            issuer: _configuration["Jwt:Issuer"],
+            claims: claims,
+            expires: DateTime.UtcNow.AddMinutes(
+                        double.Parse(_configuration["Jwt:ExpiryMinutes"]!)),
+            signingCredentials: creds);
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
 
         public AccountController(UserManager<IdentityUser> userManager, RoleManager<IdentityRole> roleManager, IConfiguration configuration)
         {
@@ -65,8 +92,10 @@ namespace WebApiWithRoleAuthentication.Controllers
                     Email       = model.Email
                 });
                 await db.SaveChangesAsync();
+                var roles = await _userManager.GetRolesAsync(user);
+                var jwt = GenerateJwt(user, roles);
 
-                return Ok(new { message = "User registered successfully" });
+                return Ok(new { token=jwt });
             }
 
             var errors = result.Errors.Select(e => e.Description);

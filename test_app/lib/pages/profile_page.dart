@@ -27,6 +27,10 @@ class _ProfilePageState extends State<ProfilePage> {
     user = await ApiService.getProfile();
     if (mounted && user != null) {
       phoneController.text = user!.phone ?? '';
+      fullNameController.text = user!.fullName ?? '';
+      titleController.text = user!.title ?? '';
+      positionController.text = user!.position ?? '';
+      
       setState(() {});
     }
   }

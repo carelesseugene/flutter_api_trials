@@ -63,7 +63,6 @@ namespace WebApiWithRoleAuthentication.Data
                 new IdentityRole { Id = "2", Name = "User", NormalizedName = "USER" }
             );
 
-            // Seed Admin Data
             var hasher = new PasswordHasher<IdentityUser>();
             var adminUser = new IdentityUser
             {
@@ -107,6 +106,17 @@ namespace WebApiWithRoleAuthentication.Data
             // ---------- NOTIFICATIONS ----------
             builder.Entity<Notification>()
             .HasIndex(n => n.UserId);
+                
+                
+            builder.Entity<UserProfile>()
+                .HasKey(p => p.UserId);
+
+            builder.Entity<UserProfile>()
+                .HasOne(p => p.User)
+                .WithOne()                      // no back-nav needed
+                .HasForeignKey<UserProfile>(p => p.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
                 }
     }
 }
