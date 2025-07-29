@@ -30,13 +30,13 @@ class DashboardPage extends StatelessWidget {
       body: Column(
         children: [
           const SizedBox(height: 64), // Space from top
-          dashTile("Projects", Icons.work, () {
+          dashTile("Projeler", Icons.work, () {
             Navigator.pushNamed(context, '/projects');
           }),
-          dashTile("Profile", Icons.person, () {
+          dashTile("Profil Sayfası", Icons.person, () {
             Navigator.pushNamed(context, '/profile');
           }),
-          dashTile("Page 3", Icons.settings, () {
+          dashTile("İş Takibi", Icons.settings, () {
           }),
           const Spacer(),
         ],

@@ -82,18 +82,18 @@ class _ColumnWidgetState extends State<_ColumnWidget> {
                       final confirmed = await showDialog<bool>(
                         context: context,
                         builder: (_) => AlertDialog(
-                          title: const Text('Delete column?'),
+                          title: const Text('Sütunu silmek istiyor musunuz?'),
                           content: const Text(
-                              'All cards in this column will also be deleted.'),
+                              'Sütundaki tüm kartlar silinecektir.'),
                           actions: [
                             TextButton(
                                 onPressed: () =>
                                     Navigator.pop(context, false),
-                                child: const Text('Cancel')),
+                                child: const Text('İptal Et')),
                             ElevatedButton(
                                 onPressed: () =>
                                     Navigator.pop(context, true),
-                                child: const Text('Delete')),
+                                child: const Text('Sil')),
                           ],
                         ),
                       );
@@ -105,7 +105,7 @@ class _ColumnWidgetState extends State<_ColumnWidget> {
                     }
                   },
                   itemBuilder: (_) => const [
-                    PopupMenuItem(value: 'delete', child: Text('Delete column')),
+                    PopupMenuItem(value: 'delete', child: Text('Delete Column')),
                   ],
                 ),
               ],
@@ -133,7 +133,7 @@ class _ColumnWidgetState extends State<_ColumnWidget> {
             /* -------- add card -------- */
             IconButton(
               icon: const Icon(Icons.add),
-              tooltip: 'Add card',
+              tooltip: 'Kart Ekle',
               onPressed: () async {
                 final title = await _newCardDialog(context);
                 if (title?.isNotEmpty == true) {
@@ -182,12 +182,12 @@ class _ColumnWidgetState extends State<_ColumnWidget> {
                   if (widget.isLead)
                     IconButton(
                       icon: const Icon(Icons.group_add, color: Colors.blue),
-                      tooltip: "Assign Members",
+                      tooltip: "Üye Ata",
                       onPressed: () async {
                         await showDialog(
                           context: context,
                           builder: (_) => AlertDialog(
-                            title: const Text("Assign Members"),
+                            title: const Text("Üye Ata"),
                             content: CardAssignmentEditor(
                               projectId: widget.projectId,
                               card: card,
@@ -212,7 +212,7 @@ class _ColumnWidgetState extends State<_ColumnWidget> {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 2),
                   child: Text(
-                    "Assigned: " +
+                    "Karta eklendi: " +
                         card.assignedUsers.map((u) => u.email).join(", "),
                     style: TextStyle(fontSize: 11, color: Colors.blueGrey[700]),
                   ),
@@ -297,7 +297,7 @@ if (isAssigned)
     child: sliderValue < 100
         ? ElevatedButton.icon(
             icon: const Icon(Icons.check_circle_outline),
-            label: const Text("Mark as Done"),
+            label: const Text("Tamamla"),
             style: ElevatedButton.styleFrom(
               minimumSize: const Size(0, 32),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -315,8 +315,7 @@ if (isAssigned)
             children: [
               Icon(Icons.check_circle, color: Colors.green[700], size: 20),
               const SizedBox(width: 4),
-              Text("Completed!", style: TextStyle(color: Colors.green[700])),
-              // If you want a "Reopen" button:
+              Text("Tamamlandı", style: TextStyle(color: Colors.green[700])),
                TextButton(
                  onPressed: () async {
                    setState(() => _sliderProgress[card.id] = 0);
@@ -325,7 +324,7 @@ if (isAssigned)
                    await widget.refresh();
                    setState(() => _sliderProgress.remove(card.id));
                  },
-                 child: Text("Reopen"),
+                 child: Text("Tekrar Başlat"),
                )
             ],
           ),
@@ -343,13 +342,13 @@ if (isAssigned)
     return showDialog<String>(
       context: ctx,
       builder: (_) => AlertDialog(
-        title: const Text('New Card'),
+        title: const Text('Yeni Kart'),
         content: TextField(controller: c),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('İptal Et')),
           ElevatedButton(
               onPressed: () => Navigator.pop(ctx, c.text.trim()),
-              child: const Text('Add')),
+              child: const Text('Ekle')),
         ],
       ),
     );
@@ -417,7 +416,7 @@ class _BoardPageState extends ConsumerState<BoardPage> {
                 .where((n) => n.status == NotificationStatus.unread)
                 .length;
             return IconButton(
-              tooltip: 'Notifications',
+              tooltip: 'Bildirimler',
               icon: Stack(
                 children: [
                   const Icon(Icons.notifications),
@@ -445,13 +444,13 @@ class _BoardPageState extends ConsumerState<BoardPage> {
             );
           }),
           IconButton(
-            tooltip: 'Members',
+            tooltip: 'Üyeler',
             icon: const Icon(Icons.group),
             onPressed: () async {
               if (_details == null) _details = await _projectFuture;
               if (!mounted || _details == null) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Could not load member list')),
+                  const SnackBar(content: Text('Üye listesi yüklenemedi.')),
                 );
                 return;
               }
@@ -493,7 +492,7 @@ class _BoardPageState extends ConsumerState<BoardPage> {
               if (p == null) {
                 return const Padding(
                   padding: EdgeInsets.all(12),
-                  child: Text('Project details unavailable'),
+                  child: Text('Proje detayları yüklenemedi.'),
                 );
               }
               return Card(
@@ -518,7 +517,7 @@ class _BoardPageState extends ConsumerState<BoardPage> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        tooltip: 'Add column',
+        tooltip: 'Yeni Sütun Ekle',
         child: const Icon(Icons.add),
         onPressed: () async {
           final title = await _newColumnDialog(context);
@@ -557,13 +556,13 @@ class _BoardPageState extends ConsumerState<BoardPage> {
     return showDialog<String>(
       context: ctx,
       builder: (_) => AlertDialog(
-        title: const Text('New Column'),
+        title: const Text('Yeni Sütun'),
         content: TextField(controller: c),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('İptal Et')),
           ElevatedButton(
               onPressed: () => Navigator.pop(ctx, c.text.trim()),
-              child: const Text('Add')),
+              child: const Text('Ekle')),
         ],
       ),
     );

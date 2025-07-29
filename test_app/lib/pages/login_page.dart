@@ -25,14 +25,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/home');
     } else {
-      setState(() => error = 'Wrong e-mail / password');
+      setState(() => error = 'Yanlış e-mail / şifre');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Login')),
+      appBar: AppBar(title: const Text('Giriş Yap')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(children: [
@@ -42,12 +42,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           TextField(
               controller: passwordController,
               obscureText: true,
-              decoration: const InputDecoration(labelText: 'Password')),
+              decoration: const InputDecoration(labelText: 'Şifre')),
           const SizedBox(height: 12),
-          ElevatedButton(onPressed: _login, child: const Text('Login')),
+          ElevatedButton(onPressed: _login, child: const Text('Giriş Yap')),
           TextButton(
               onPressed: () => Navigator.pushNamed(context, '/signup'),
-              child: const Text("Don't have an account? Sign up")),
+              child: const Text("Hesabınız yok mu? Kayıt Olun.")),
           if (error.isNotEmpty)
             Text(error, style: const TextStyle(color: Colors.red)),
         ]),

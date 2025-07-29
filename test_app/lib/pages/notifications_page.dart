@@ -27,7 +27,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
   Widget build(BuildContext context) {
     final list = ref.watch(notificationsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Notifications')),
+      appBar: AppBar(title: const Text('Bildirimler')),
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: ListView.separated(
@@ -45,7 +45,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
       final pid  = n.payload['projectId'];
       return ListTile(
         leading: const Icon(Icons.mail),
-        title: Text('You are invited to $name'),
+        title: Text('Bir projeye davet edildiniz: $name'),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [

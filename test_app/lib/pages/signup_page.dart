@@ -27,14 +27,14 @@ class _SignupPageState extends ConsumerState<SignupPage> {
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/home');
     } else {
-      setState(() => error = 'Could not register.');
+      setState(() => error = 'Kayıt başarısız oldu. Lütfen tekrar deneyin.');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Sign Up')),
+      appBar: AppBar(title: const Text('Kayıt Ol')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(children: [
@@ -44,15 +44,15 @@ class _SignupPageState extends ConsumerState<SignupPage> {
           TextField(
               controller: passwordController,
               obscureText: true,
-              decoration: const InputDecoration(labelText: 'Password')),
+              decoration: const InputDecoration(labelText: 'Şifre')),
           TextField(
               controller: phoneController,
-              decoration: const InputDecoration(labelText: 'Phone')),
+              decoration: const InputDecoration(labelText: 'Telefon No')),
           const SizedBox(height: 12),
-          ElevatedButton(onPressed: _signup, child: const Text('Sign Up')),
+          ElevatedButton(onPressed: _signup, child: const Text('Kayıt Ol')),
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Already have an account? Login')),
+              child: const Text('Hesabınız var mı? Giriş yapın')),
           if (error.isNotEmpty)
             Text(error, style: const TextStyle(color: Colors.red)),
         ]),

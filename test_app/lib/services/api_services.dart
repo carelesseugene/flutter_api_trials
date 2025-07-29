@@ -35,6 +35,17 @@ class ApiService {
         },
         body: jsonEncode(body ?? {}));
   }
+  static Future<http.Response> _put(String path, {Map<String, dynamic>? body}) async {
+  final token = await _getToken();
+  return http.put(Uri.parse('$baseUrl/$path'),
+    headers: {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    },
+    body: jsonEncode(body ?? {}),
+  );
+}
+
 
   static Future<http.Response> _delete(String path) async {
     final token = await _getToken();
@@ -100,6 +111,24 @@ class ApiService {
 
   static Future<void> logout() async =>
       (await SharedPreferences.getInstance()).remove('token');
+
+  static Future<bool> changePassword(
+    {required String email,
+     required String currentPwd,
+     required String newPwd}) async {
+
+  final token = await _getToken();
+  if (token == null) return false;
+
+  final res = await _put('User/change-password', body: {
+    'email'          : email,
+    'currentPassword': currentPwd,
+    'newPassword'    : newPwd,
+  });
+
+  return res.statusCode == 200;
+}
+
 
   static Future<User?> getProfile() async {
     final token = await _getToken();

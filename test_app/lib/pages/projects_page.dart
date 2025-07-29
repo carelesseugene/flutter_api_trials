@@ -6,8 +6,7 @@ import '../pages/board_page.dart';
 import '../providers/notification_provider.dart';  
 import '../models/notification.dart';               
 import '../pages/notifications_page.dart';
-import '../pages/members_page.dart';    // <-- MembersPage'i import et!
-
+import '../pages/members_page.dart';    
 class ProjectsPage extends ConsumerWidget {
   const ProjectsPage({super.key});
 
@@ -17,7 +16,7 @@ class ProjectsPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Projects'),
+        title: const Text('Projeler'),
         actions: [
           Consumer(builder: (context, ref, _) {
             final unread = ref
@@ -26,7 +25,7 @@ class ProjectsPage extends ConsumerWidget {
                 .length;
 
             return IconButton(
-              tooltip: 'Notifications',
+              tooltip: 'Bildirimler',
               icon: Stack(
                 children: [
                   const Icon(Icons.notifications),
@@ -62,7 +61,7 @@ class ProjectsPage extends ConsumerWidget {
             final p = list[i];
             return ListTile(
               title: Text(p.name),
-              subtitle: Text('Owner: ${p.ownerEmail} • ${p.memberCount} members'),
+              subtitle: Text('Proje sahibi: ${p.ownerEmail} • ${p.memberCount} adet üye'),
               onTap: () async {
                 // BoardPage veya MembersPage’den dönünce projeleri otomatik yenile
                 await Navigator.push(
@@ -122,16 +121,16 @@ class ProjectsPage extends ConsumerWidget {
     return showDialog<String>(
       context: ctx,
       builder: (_) => AlertDialog(
-        title: const Text('New Project'),
+        title: const Text('Yeni Proje'),
         content: TextField(
           controller: c,
-          decoration: const InputDecoration(labelText: 'Name'),
+          decoration: const InputDecoration(labelText: 'Proje Adı'),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('İptal Et')),
           ElevatedButton(
               onPressed: () => Navigator.pop(ctx, c.text.trim()),
-              child: const Text('Create')),
+              child: const Text('Oluştur')),
         ],
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/user.dart';
 import '../services/api_services.dart';
+import '../widgets/change_password_dialog.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -59,13 +60,28 @@ class _ProfilePageState extends State<ProfilePage> {
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(children: [
-          Text('User-ID: ${user!.id}', style: const TextStyle(fontSize: 16)),
+          Text('Kullanıcı ID: ${user!.id}', style: const TextStyle(fontSize: 16)),
           const SizedBox(height: 32),
           TextField(
               controller: phoneController,
-              decoration: const InputDecoration(labelText: 'Phone', prefixText: '+')),
+              decoration: const InputDecoration(labelText: 'Telefon No', prefixText: '+')),
           const SizedBox(height: 12),
-          ElevatedButton(onPressed: _update, child: const Text('Update')),
+          ElevatedButton(onPressed: _update, child: const Text('Güncelle')),
+          ElevatedButton.icon(
+              icon: const Icon(Icons.lock_reset),
+              label: const Text('Şifreni değiştir'),
+              onPressed: () async {
+                final success = await showDialog<bool>(
+                  context: context,
+                  builder: (_) => ChangePasswordDialog(email: user!.email),
+                );
+                if (success == true && mounted) {
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(const SnackBar(content: Text('Şifre değiştirildi')));
+                }
+              },
+            ),
+
         ]),
       ),
     );
