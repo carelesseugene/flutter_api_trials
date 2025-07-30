@@ -15,7 +15,7 @@ namespace WebApiWithRoleAuthentication.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Policy = "RoleUser")]
+    [Authorize]
     public class UserController : ControllerBase
     {
 

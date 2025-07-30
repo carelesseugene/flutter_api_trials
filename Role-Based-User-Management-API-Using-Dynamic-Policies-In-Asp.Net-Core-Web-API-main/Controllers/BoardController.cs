@@ -72,47 +72,59 @@ public class BoardController : ControllerBase
     }
 
     // POST /api/projects/{projectId}/columns/{colId}/cards
-    [HttpPost("columns/{colId:guid}/cards")]
-    public async Task<ActionResult<CardDto>> AddCard(
-        Guid projectId, Guid colId, CreateCardDto dto)
+    // POST /api/projects/{projectId}/columns/{colId}/cards
+[HttpPost("columns/{colId:guid}/cards")]
+public async Task<ActionResult<CardDto>> AddCard(
+    Guid projectId, Guid colId, CreateCardDto dto)
+{
+    var uid = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+    // user must be a member of the project
+    var member = await _db.ProjectMembers
+        .FirstOrDefaultAsync(m => m.ProjectId == projectId && m.UserId == uid);
+    if (member == null) return Forbid();
+
+    // next position in the column
+    var pos = await _db.TaskCards
+        .Where(c => c.ColumnId == colId)
+        .MaxAsync(c => (int?)c.Position) ?? -1;
+
+    /* ───────── create card & auto-assign creator ───────── */
+    var card = new TaskCard
     {
-        var uid = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-
-        var member = await _db.ProjectMembers
-            .FirstOrDefaultAsync(m => m.ProjectId == projectId && m.UserId == uid);
-        if (member == null) return Forbid();
-
-        var pos = await _db.TaskCards
-            .Where(c => c.ColumnId == colId)
-            .MaxAsync(c => (int?)c.Position) ?? -1;
-
-        var card = new TaskCard
+        ColumnId    = colId,
+        Title       = dto.Title,
+        Description = dto.Description,
+        DueUtc      = dto.DueUtc,
+        Position    = pos + 1,
+        Assignments =
         {
-            ColumnId = colId,
-            Title = dto.Title,
-            Description = dto.Description,
-            DueUtc = dto.DueUtc,
-            Position = pos + 1
-        };
-        _db.TaskCards.Add(card);
-        await _db.SaveChangesAsync();
+            new TaskCardAssignment { UserId = uid }   // ← creator gets the task
+        }
+    };
+    _db.TaskCards.Add(card);
+    await _db.SaveChangesAsync();
 
-        // For CardDto, show empty assignment list for new card
-        var cardDto = new CardDto(
-            card.Id,
-            card.ColumnId,
-            card.Title,
-            card.Description,
-            new List<AssignedUserDto>(),
-            card.Position,
-            card.ProgressPercent,
-            card.DueUtc
-        );
+    /* ───────── build DTO (includes the single assignee) ───────── */
+    var cardDto = new CardDto(
+        card.Id,
+        card.ColumnId,
+        card.Title,
+        card.Description,
+        new List<AssignedUserDto>
+        {
+            new AssignedUserDto(uid, User.Identity!.Name ?? "(me)")
+        },
+        card.Position,
+        card.ProgressPercent,
+        card.DueUtc
+    );
 
-        await _events.CardCreated(projectId, cardDto);
+    await _events.CardCreated(projectId, cardDto);
 
-        return Created("", cardDto);
-    }
+    return Created(string.Empty, cardDto);
+}
+
 
     // PATCH /api/projects/{projectId}/cards/{cardId}/move
     [HttpPatch("cards/{cardId:guid}/move")]
