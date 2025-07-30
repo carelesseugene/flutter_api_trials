@@ -262,12 +262,31 @@ class ApiService {
   }
 
   static Future<TaskCard> addCard(
-      String projectId, String columnId, String title) async {
-    final res = await _post('projects/$projectId/columns/$columnId/cards',
-        body: {'title': title});
-    if (res.statusCode != 201) throw Exception(res.body);
-    return TaskCard.fromJson(jsonDecode(res.body));
-  }
+  String projectId,
+  String columnId,
+  String title, {
+  String? description,
+  DateTime? dueUtc,
+}) async {
+  final body = {
+    'title': title,
+    'description': description,
+    'dueUtc': dueUtc?.toIso8601String(),
+  };
+  final res = await _post('projects/$projectId/columns/$columnId/cards', body: body);
+  if (res.statusCode != 201) throw Exception(res.body);
+  return TaskCard.fromJson(jsonDecode(res.body));
+}
+static Future<void> updateCardDueDate(
+  String projectId, String cardId, DateTime? dueUtc) async {
+  final res = await _patch(
+    'projects/$projectId/cards/$cardId/due',
+    body: {'dueUtc': dueUtc?.toIso8601String()},
+  );
+  if (res.statusCode != 204) throw Exception(res.body);
+}
+
+
 
   static Future<void> deleteColumn(String projectId, String colId) async {
     final res = await _delete('projects/$projectId/columns/$colId');

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:collection/collection.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
 import '../models/board.dart';
 import '../models/project.dart';
 import '../models/notification.dart';
@@ -135,12 +136,18 @@ class _ColumnWidgetState extends State<_ColumnWidget> {
               icon: const Icon(Icons.add),
               tooltip: 'Kart Ekle',
               onPressed: () async {
-                final title = await _newCardDialog(context);
-                if (title?.isNotEmpty == true) {
+                final result = await _newCardDialog(context);
+                if (result != null && (result['title'] as String?)?.isNotEmpty == true) {
                   await ApiService.addCard(
-                      widget.projectId, widget.column.id, title!);
+                    widget.projectId,
+                    widget.column.id,
+                    result['title'] as String,
+                    dueUtc: result['dueUtc'] as DateTime?,
+                  );
                   await widget.refresh();
                 }
+
+
               },
             ),
           ],
@@ -148,41 +155,70 @@ class _ColumnWidgetState extends State<_ColumnWidget> {
       );
 
   Widget _draggableCard(int i) {
-    final card = widget.column.cards[i];
-    final assignedIds = card.assignedUsers.map((u) => u.userId).toSet();
-    final isAssigned = assignedIds.contains(widget.myUserId);
-    final sliderValue = _sliderProgress[card.id] ?? card.progressPercent;
+  final card = widget.column.cards[i];
+  final assignedIds = card.assignedUsers.map((u) => u.userId).toSet();
+  final isAssigned = assignedIds.contains(widget.myUserId);
 
-    return Draggable<TaskCard>(
-      data: card,
-      feedback: Material(
-        child: SizedBox(
-          width: 240,
-          child: Card(child: ListTile(title: Text(card.title))),
-        ),
-        elevation: 6,
-      ),
-      childWhenDragging: Opacity(
-        opacity: 0.3,
+  return Draggable<TaskCard>(
+    data: card,
+    feedback: Material(
+      child: SizedBox(
+        width: 240,
         child: Card(child: ListTile(title: Text(card.title))),
       ),
-      child: Card(
-        key: ValueKey(card.id),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Title + Delete + Assign button if lead
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(card.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+      elevation: 6,
+    ),
+    childWhenDragging: Opacity(
+      opacity: 0.3,
+      child: Card(child: ListTile(title: Text(card.title))),
+    ),
+    child: Card(
+      key: ValueKey(card.id),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Card name
+            Text(
+              card.title,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const SizedBox(height: 6),
+
+            // Description
+            if (card.description != null && card.description!.isNotEmpty)
+              Text(
+                card.description!,
+                style: TextStyle(fontSize: 13, color: Colors.grey[800]),
+              ),
+            if (card.description != null && card.description!.isNotEmpty)
+              const SizedBox(height: 6),
+
+            // Assigned Members
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    card.assignedUsers.isNotEmpty
+                        ? "Assigned Members: " +
+                            card.assignedUsers.map((u) => u.email).join(", ")
+                        : "No members assigned.",
+                    style: TextStyle(fontSize: 12, color: Colors.blueGrey[700]),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  if (widget.isLead)
-                    IconButton(
-                      icon: const Icon(Icons.group_add, color: Colors.blue),
-                      tooltip: "Üye Ata",
+                ),
+                if (widget.isLead)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8.0),
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        minimumSize: Size(0, 28),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text("Üye Ata", style: TextStyle(fontSize: 12)),
                       onPressed: () async {
                         await showDialog(
                           context: context,
@@ -198,161 +234,194 @@ class _ColumnWidgetState extends State<_ColumnWidget> {
                         await widget.refresh();
                       },
                     ),
-                  IconButton(
-                    icon: const Icon(Icons.delete_forever, color: Colors.red),
+                  ),
+              ],
+            ),
+
+            const Divider(height: 16),
+
+            // Progress and "değiştir"
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  "%${card.progressPercent} tamamlandı",
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(width: 4),
+                if (isAssigned)
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      minimumSize: Size(0, 26),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text("değiştir", style: TextStyle(fontSize: 12)),
                     onPressed: () async {
-                      await ApiService.deleteCard(widget.projectId, card.id);
-                      await widget.refresh();
+                      int? newProgress = await showDialog<int>(
+                        context: context,
+                        builder: (_) {
+                          int tempValue = card.progressPercent;
+                          return AlertDialog(
+                            title: const Text("İlerleme Güncelle"),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                DropdownButton<int>(
+                                  value: tempValue,
+                                  items: List.generate(
+                                    11,
+                                    (i) => DropdownMenuItem(
+                                      value: i * 10,
+                                      child: Text("%${i * 10}"),
+                                    ),
+                                  ),
+                                  onChanged: (val) {
+                                    if (val != null) tempValue = val;
+                                  },
+                                ),
+                                ElevatedButton.icon(
+                                  icon: const Icon(Icons.check_circle_outline),
+                                  label: const Text("Tamamla"),
+                                  onPressed: () {
+                                    Navigator.pop(context, 100);
+                                  },
+                                ),
+                              ],
+                            ),
+                            actions: [
+                              TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text('İptal')),
+                              ElevatedButton(
+                                onPressed: () => Navigator.pop(context, tempValue),
+                                child: const Text('Kaydet'),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                      if (newProgress != null) {
+                        await ApiService.updateCardProgress(
+                          widget.projectId, card.id, newProgress,
+                        );
+                        await widget.refresh();
+                      }
                     },
                   ),
-                ],
-              ),
-              // Assigned user list (everyone sees)
-              if (card.assignedUsers.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 2),
-                  child: Text(
-                    "Karta eklendi: " +
-                        card.assignedUsers.map((u) => u.email).join(", "),
-                    style: TextStyle(fontSize: 11, color: Colors.blueGrey[700]),
-                  ),
-                ),
-              // Progress bar (assigned users only)
-              Padding(
-                padding: const EdgeInsets.only(top: 4, bottom: 2),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Slider(
-                        value: sliderValue.toDouble(),
-                        min: 0,
-                        max: 100,
-                        divisions: 100,
-                        label: "$sliderValue%",
-                        onChanged: isAssigned
-                            ? (v) {
-                                setState(() {
-                                  _sliderProgress[card.id] = v.round();
-                                });
-                              }
-                            : null,
-                        onChangeEnd: isAssigned
-                            ? (v) async {
-                                await ApiService.updateCardProgress(
-                                    widget.projectId, card.id, v.round());
-                                await widget.refresh();
-                                setState(() => _sliderProgress.remove(card.id));
-                              }
-                            : null,
-                        activeColor: isAssigned ? Colors.blue : Colors.grey,
-                        inactiveColor: Colors.grey.shade300,
-                      ),
-                    ),
-                    Text("$sliderValue%"),
-                  ],
-                ),
-              ),
-              // Progress bar info (only assigned users can edit)
-              if (!isAssigned)
-                // ... existing progress bar code ...
-Padding(
-  padding: const EdgeInsets.only(top: 4, bottom: 2),
-  child: Row(
-    children: [
-      Expanded(
-        child: Slider(
-          value: sliderValue.toDouble(),
-          min: 0,
-          max: 100,
-          divisions: 100,
-          label: "$sliderValue%",
-          onChanged: isAssigned && sliderValue < 100
-              ? (v) {
-                  setState(() {
-                    _sliderProgress[card.id] = v.round();
-                  });
-                }
-              : null,
-          onChangeEnd: isAssigned && sliderValue < 100
-              ? (v) async {
-                  await ApiService.updateCardProgress(
-                      widget.projectId, card.id, v.round());
-                  await widget.refresh();
-                  setState(() => _sliderProgress.remove(card.id));
-                }
-              : null,
-          activeColor: isAssigned ? Colors.blue : Colors.grey,
-          inactiveColor: Colors.grey.shade300,
-        ),
-      ),
-      Text("$sliderValue%"),
-    ],
-  ),
-),
-
-// --- Mark as Done / Completed button ---
-if (isAssigned)
-  Padding(
-    padding: const EdgeInsets.only(top: 2),
-    child: sliderValue < 100
-        ? ElevatedButton.icon(
-            icon: const Icon(Icons.check_circle_outline),
-            label: const Text("Tamamla"),
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size(0, 32),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              ],
             ),
-            onPressed: () async {
-              setState(() => _sliderProgress[card.id] = 100);
-              await ApiService.updateCardProgress(
-                  widget.projectId, card.id, 100);
-              await widget.refresh();
-              setState(() => _sliderProgress.remove(card.id));
-            },
-          )
-        : Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.green[700], size: 20),
-              const SizedBox(width: 4),
-              Text("Tamamlandı", style: TextStyle(color: Colors.green[700])),
-               TextButton(
-                 onPressed: () async {
-                   setState(() => _sliderProgress[card.id] = 0);
-                   await ApiService.updateCardProgress(
-                       widget.projectId, card.id, 0);
-                   await widget.refresh();
-                   setState(() => _sliderProgress.remove(card.id));
-                 },
-                 child: Text("Tekrar Başlat"),
-               )
-            ],
-          ),
-  ),
 
-            ],
-          ),
+            // Responsive Due Date + Düzenle
+            if (card.dueUtc != null || widget.isLead)
+              Padding(
+                padding: const EdgeInsets.only(top: 6, left: 2),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (card.dueUtc != null)
+                          Flexible(
+                            child: Text(
+                              "Teslim: ${DateFormat('dd.MM.yyyy').format(card.dueUtc!)}",
+                              style: const TextStyle(fontSize: 13, color: Colors.orange),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        if (card.dueUtc != null && widget.isLead)
+                          const SizedBox(width: 10),
+                        if (widget.isLead)
+                          Flexible(
+                            child: TextButton(
+                              child: const Text("Düzenle", style: TextStyle(fontSize: 12)),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                minimumSize: Size(0, 26),
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              onPressed: () async {
+                                final picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: card.dueUtc ?? DateTime.now(),
+                                  firstDate: DateTime.now(),
+                                  lastDate: DateTime.now().add(const Duration(days: 365 * 3)),
+                                );
+                                if (picked != null) {
+                                  await ApiService.updateCardDueDate(
+                                      widget.projectId, card.id, picked);
+                                  await widget.refresh();
+                                }
+                              },
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
-  Future<String?> _newCardDialog(BuildContext ctx) async {
-    final c = TextEditingController();
-    return showDialog<String>(
-      context: ctx,
-      builder: (_) => AlertDialog(
-        title: const Text('Yeni Kart'),
-        content: TextField(controller: c),
+
+  Future<Map<String, dynamic>?> _newCardDialog(BuildContext ctx) async {
+  final c = TextEditingController();
+  DateTime? _selectedDueDate;
+
+  return showDialog<Map<String, dynamic>>(
+    context: ctx,
+    builder: (_) => StatefulBuilder(
+      builder: (context, setState) => AlertDialog(
+        title: const Text('New Card'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: c,
+              decoration: const InputDecoration(labelText: "Title"),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Text(_selectedDueDate == null
+                    ? "No due date"
+                    : "Due: ${_selectedDueDate!.toLocal().toString().split(' ')[0]}"),
+                IconButton(
+                  icon: const Icon(Icons.date_range),
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(const Duration(days: 365 * 3)),
+                    );
+                    if (picked != null) setState(() => _selectedDueDate = picked);
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('İptal Et')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel')),
           ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, c.text.trim()),
-              child: const Text('Ekle')),
+            onPressed: () => Navigator.pop(ctx, {
+              'title': c.text.trim(),
+              'dueUtc': _selectedDueDate,
+            }),
+            child: const Text('Add'),
+          ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 

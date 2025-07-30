@@ -91,6 +91,7 @@ public class BoardController : ControllerBase
             ColumnId = colId,
             Title = dto.Title,
             Description = dto.Description,
+            DueUtc = dto.DueUtc,
             Position = pos + 1
         };
         _db.TaskCards.Add(card);
@@ -279,4 +280,32 @@ public class BoardController : ControllerBase
 
         return NoContent();
     }
+
+
+    public record UpdateDueDateRequest(DateTime? DueUtc);
+
+    [HttpPatch("cards/{cardId:guid}/due")]
+    public async Task<IActionResult> UpdateCardDueDate(Guid projectId, Guid cardId, [FromBody] UpdateDueDateRequest req)
+    {
+        var uid = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+        // Check if user is the lead of this project
+        var lead = await _db.ProjectMembers
+            .FirstOrDefaultAsync(m => m.ProjectId == projectId && m.UserId == uid && m.Role == ProjectRole.Lead);
+
+        if (lead == null)
+            return Forbid();
+
+        var card = await _db.TaskCards
+            .Include(c => c.Column)
+            .FirstOrDefaultAsync(c => c.Id == cardId && c.Column.ProjectId == projectId);
+
+        if (card == null) return NotFound();
+
+        card.DueUtc = req.DueUtc;
+        await _db.SaveChangesAsync();
+
+        return NoContent();
+    }
+
 }

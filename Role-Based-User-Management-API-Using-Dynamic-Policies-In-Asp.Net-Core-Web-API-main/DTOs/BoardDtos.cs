@@ -5,7 +5,7 @@ public record CreateColumnDto(string Title);
 public record ColumnDto(Guid Id, string Title, int Position);
 public record AssignedUserDto(string UserId, string Email);
 
-public record CreateCardDto(string Title, string? Description);
+public record CreateCardDto(string Title, string? Description, DateTime? DueUtc);
 public record MoveCardDto(Guid TargetColumnId, int NewPosition);
 public record CardDto(
     Guid Id,
