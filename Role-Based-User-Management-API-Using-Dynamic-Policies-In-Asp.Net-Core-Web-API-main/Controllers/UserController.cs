@@ -4,6 +4,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using WebApiWithRoleAuthentication.Models;
 using WebApiWithRoleAuthentication.Data;
+using WebApiWithRoleAuthentication.DTOs;
+using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
 
 namespace WebApiWithRoleAuthentication.Controllers
 
@@ -104,6 +107,37 @@ namespace WebApiWithRoleAuthentication.Controllers
             }
 
             return BadRequest(result.Errors);
+        }
+        [HttpGet("assigned-cards")]
+        public async Task<ActionResult<List<AssignedCardDto>>> GetAssignedCards()
+        {
+            var uid = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+            var cards = await db.TaskCards
+                .Where(card => card.Assignments.Any(a => a.UserId == uid))
+                .Include(card => card.Column)
+                    .ThenInclude(col => col.Project)
+                .Include(card => card.Assignments)
+                    .ThenInclude(a => a.User)
+                .OrderBy(card => card.DueUtc ?? DateTime.MaxValue)
+                .ToListAsync();
+
+            var dtos = cards.Select(card => new AssignedCardDto(
+                card.Id,
+                card.Title,
+                card.Description,
+                card.ProgressPercent,
+                card.DueUtc,
+                card.Column.ProjectId,
+                card.Column.Project.Name,
+                card.ColumnId,
+                card.Column.Title,
+                card.Assignments.Select(a =>
+                    new AssignedUserDto(a.UserId, a.User.Email!)
+                ).ToList()
+            )).ToList();
+
+            return dtos;
         }
     }
 }

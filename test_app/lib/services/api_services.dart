@@ -8,7 +8,7 @@ import '../models/notification.dart';
 import '../models/project.dart';
 import '../models/user.dart';
 import '../models/task_card.dart';
-
+import '../models/assigned_card.dart';
 class ApiService {
   static const _host    = 'http://10.0.2.2:5129';
   static const baseUrl  = '$_host/api';
@@ -330,6 +330,14 @@ static Future<void> updateCardProgress(String projectId, String cardId, int prog
   if (res.statusCode != 204) throw Exception(res.body);
 }
 
+
+static Future<List<AssignedCard>> getAssignedCards() async {
+  final res = await _get('user/assigned-cards');
+  if (res.statusCode != 200) throw Exception(res.body);
+
+  final list = (jsonDecode(res.body) as List);
+  return list.map((e) => AssignedCard.fromJson(e)).toList();
+}
 
 
 }

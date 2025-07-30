@@ -54,7 +54,7 @@ class _ColumnWidget extends StatefulWidget {
 }
 
 class _ColumnWidgetState extends State<_ColumnWidget> {
-  final Map<String, int> _sliderProgress = {}; // For local slider values
+  //final Map<String, int> _sliderProgress = {}; // For local slider values
 
 
 

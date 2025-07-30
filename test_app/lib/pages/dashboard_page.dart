@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/api_services.dart';
 import '../pages/login_page.dart';
+import '../pages/assigned_card_page.dart'; // <-- Add this line
+
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
 
@@ -36,7 +38,11 @@ class DashboardPage extends StatelessWidget {
           dashTile("Profil Sayfası", Icons.person, () {
             Navigator.pushNamed(context, '/profile');
           }),
-          dashTile("İş Takibi", Icons.settings, () {
+          dashTile("İş Takibi", Icons.assignment, () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AssignedTasksPage()),
+            );
           }),
           const Spacer(),
         ],
@@ -55,8 +61,10 @@ class DashboardPage extends StatelessWidget {
                   await ApiService.logout();
                   if (context.mounted) {
                     Navigator.pushAndRemoveUntil(
-                        context, MaterialPageRoute(builder: (_) => const LoginPage()), (_) => false,
-                        );   
+                      context,
+                      MaterialPageRoute(builder: (_) => const LoginPage()),
+                      (_) => false,
+                    );
                   }
                 },
               ),
