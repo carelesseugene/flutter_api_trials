@@ -1,4 +1,4 @@
-using ProjectManagement.Domain;
+using WebApiWithRoleAuthentication.Domain;
 namespace WebApiWithRoleAuthentication.DTOs;
 public record CreateProjectDto(string Name, string? Description);
 public record MemberDto(string UserId, string Email, ProjectRole Role);

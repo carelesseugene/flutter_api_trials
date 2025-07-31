@@ -1,9 +1,8 @@
 using Microsoft.AspNetCore.Identity;
+using WebApiWithRoleAuthentication.Domain.Enums;
+namespace WebApiWithRoleAuthentication.Domain;
 
-namespace ProjectManagement.Domain;
 
-public enum NotificationType { Invite = 0 /* future: Comment, CardMoved … */ }
-public enum NotificationStatus { Unread = 0, Read = 1, Actioned = 2 }
 
 public class Notification
 {

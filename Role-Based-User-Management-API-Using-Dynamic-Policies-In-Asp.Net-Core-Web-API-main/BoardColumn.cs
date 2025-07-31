@@ -1,4 +1,4 @@
-using ProjectManagement.Domain;
+using WebApiWithRoleAuthentication.Domain;
 
 public class BoardColumn
 {

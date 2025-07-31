@@ -324,7 +324,7 @@ static Future<void> assignUsersToCard(String projectId, String cardId, List<Stri
   if (res.statusCode != 204) throw Exception(res.body);
 }
 
-// Update card progress
+
 static Future<void> updateCardProgress(String projectId, String cardId, int progress) async {
   final res = await _patch('projects/$projectId/cards/$cardId/progress', body: {'progress': progress});
   if (res.statusCode != 204) throw Exception(res.body);

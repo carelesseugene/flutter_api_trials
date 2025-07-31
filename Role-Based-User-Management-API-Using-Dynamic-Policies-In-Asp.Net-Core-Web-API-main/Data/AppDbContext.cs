@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using WebApiWithRoleAuthentication.Models;
-using ProjectManagement.Domain;
+using WebApiWithRoleAuthentication.Domain;
 namespace WebApiWithRoleAuthentication.Data
 {
     public class AppDbContext : IdentityDbContext<IdentityUser>

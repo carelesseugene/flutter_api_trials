@@ -13,6 +13,11 @@ using WebApiWithRoleAuthentication.Models;
 using WebApiWithRoleAuthentication.Services;
 using WebApiWithRoleAuthentication.Requirements;      // ← NEW  (namespace for OwnerOrLead*)
 using Microsoft.AspNetCore.SignalR;
+using WebApiWithRoleAuthentication.Services.Interfaces;
+using WebApiWithRoleAuthentication.Services;
+using WebApiWithRoleAuthentication.Workers;
+
+
 const string AllowAll = "AllowAll";
 
 var builder = WebApplication.CreateBuilder(args);
@@ -98,7 +103,12 @@ builder.Services.AddAuthorization(opts =>
 
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, DynamicPolicyProvider>();
 builder.Services.AddSingleton<IAuthorizationHandler, DynamicRoleHanlder>();
-builder.Services.AddScoped<IAuthorizationHandler, OwnerOrLeadHandler>(); // ← NEW
+builder.Services.AddScoped<IAuthorizationHandler, OwnerOrLeadHandler>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddHostedService<DueDateReminderWorker>();
+builder.Services.AddScoped<IInvitationService, InvitationService>();
+
+ // ← NEW
 
 /*───────────────── Misc ─────────────────*/
 builder.Logging.ClearProviders();
