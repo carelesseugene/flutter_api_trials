@@ -71,6 +71,29 @@ namespace WebApiWithRoleAuthentication.Controllers
 
             return Ok();
         }
+        [HttpGet("public-profile/{userId}")]
+        public async Task<IActionResult> GetPublicProfile(string userId)
+        {
+            var profile = await db.UserProfiles.Include(up => up.User)
+                .FirstOrDefaultAsync(up => up.UserId == userId);
+            if (profile == null)
+            {
+                return NotFound(new { message = "Profile not found." });
+            }
+
+            return Ok(new
+            {
+                userId = profile.UserId,
+                email = profile.User.Email,
+                phoneNumber = profile.PhoneNumber,
+                fullName = profile.FullName,
+                title = profile.Title,
+                position = profile.Position,
+                
+                
+                
+            });
+        }
 
         [HttpDelete("delete-user")]
         public async Task<IActionResult> DeleteUserAccount([FromBody] string email)

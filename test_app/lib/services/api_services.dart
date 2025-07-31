@@ -338,6 +338,11 @@ static Future<List<AssignedCard>> getAssignedCards() async {
   final list = (jsonDecode(res.body) as List);
   return list.map((e) => AssignedCard.fromJson(e)).toList();
 }
+static Future<Map<String, dynamic>> getPublicProfile(String userId) async {
+  final res = await _get('user/public-profile/$userId');
+  if (res.statusCode != 200) throw Exception('Profile not found');
+  return jsonDecode(res.body) as Map<String, dynamic>;
+}
 
 
 }

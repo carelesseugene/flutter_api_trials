@@ -14,6 +14,7 @@ import '../providers/board_provider.dart';
 import '../providers/notification_provider.dart';
 import '../pages/notifications_page.dart';
 import '../pages/members_page.dart';
+import '../pages/public_profile_page.dart';
 import '../widgets/card_assignment_editor.dart';
 
 class BoardPage extends ConsumerStatefulWidget {
@@ -196,47 +197,73 @@ class _ColumnWidgetState extends State<_ColumnWidget> {
               const SizedBox(height: 6),
 
             // Assigned Members
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    card.assignedUsers.isNotEmpty
-                        ? "Assigned Members: " +
-                            card.assignedUsers.map((u) => u.email).join(", ")
-                        : "No members assigned.",
-                    style: TextStyle(fontSize: 12, color: Colors.blueGrey[700]),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+           Row(
+  crossAxisAlignment: CrossAxisAlignment.center,
+  children: [
+    // Assigned members as tappable chips/links
+    if (card.assignedUsers.isNotEmpty)
+      Expanded(
+        child: Wrap(
+          spacing: 6,
+          runSpacing: 2,
+          children: card.assignedUsers.map((u) =>
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => PublicProfilePage(userId: u.userId),
                   ),
+                );
+              },
+              child: Text(
+                u.email,
+                style: const TextStyle(
+                  color: Colors.blue,
+                  decoration: TextDecoration.underline,
+                  fontSize: 12,
                 ),
-                if (widget.isLead)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 8.0),
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        minimumSize: Size(0, 28),
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: const Text("Üye Ata", style: TextStyle(fontSize: 12)),
-                      onPressed: () async {
-                        await showDialog(
-                          context: context,
-                          builder: (_) => AlertDialog(
-                            title: const Text("Üye Ata"),
-                            content: CardAssignmentEditor(
-                              projectId: widget.projectId,
-                              card: card,
-                              allMembers: widget.members,
-                            ),
-                          ),
-                        );
-                        await widget.refresh();
-                      },
-                    ),
-                  ),
-              ],
-            ),
+              ),
+            )
+          ).toList(),
+        ),
+      )
+    else
+      const Expanded(
+        child: Text(
+          "No members assigned.",
+          style: TextStyle(fontSize: 12, color: Colors.blueGrey),
+        ),
+      ),
+    if (widget.isLead)
+      Padding(
+        padding: const EdgeInsets.only(left: 8.0),
+        child: OutlinedButton(
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            minimumSize: const Size(0, 28),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          child: const Text("Üye Ata", style: TextStyle(fontSize: 12)),
+          onPressed: () async {
+            await showDialog(
+              context: context,
+              builder: (_) => AlertDialog(
+                title: const Text("Üye Ata"),
+                content: CardAssignmentEditor(
+                  projectId: widget.projectId,
+                  card: card,
+                  allMembers: widget.members,
+                ),
+              ),
+            );
+            await widget.refresh();
+          },
+        ),
+      ),
+  ],
+),
+
 
             const Divider(height: 16),
 

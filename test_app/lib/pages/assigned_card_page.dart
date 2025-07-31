@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../models/assigned_card.dart';
+//import '../models/assigned_card.dart';
 import '../providers/assigned_card_provider.dart';
 
 class AssignedTasksPage extends ConsumerWidget {

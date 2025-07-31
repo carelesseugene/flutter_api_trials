@@ -3,7 +3,7 @@ import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/project.dart';
 import '../services/api_services.dart';
-
+import '../pages/public_profile_page.dart';
 
 class MembersPage extends StatefulWidget {
   final String projectId;
@@ -172,19 +172,28 @@ class _MembersPageState extends State<MembersPage> {
                       final member = members[i];
                       final isMe = member.email == myEmail;
                       return ListTile(
-                        leading: CircleAvatar(
-                          child: Text(member.email[0].toUpperCase()),
-                        ),
-                        title: Text(member.email),
-                        subtitle: Text(member.role.name),
-                        trailing: isOwner && !isMe
-                            ? IconButton(
-                                icon: const Icon(Icons.remove_circle, color: Colors.red),
-                                tooltip: 'Projeden Çıkar',
-                                onPressed: () => _removeMember(context, member),
-                              )
-                            : null,
-                      );
+                          leading: CircleAvatar(
+                            child: Text(member.email[0].toUpperCase()),
+                          ),
+                          title: Text(member.email),
+                          subtitle: Text(member.role.name),
+                          trailing: isOwner && !isMe
+                              ? IconButton(
+                                  icon: const Icon(Icons.remove_circle, color: Colors.red),
+                                  tooltip: 'Projeden Çıkar',
+                                  onPressed: () => _removeMember(context, member),
+                                )
+                              : null,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => PublicProfilePage(userId: member.userId),
+                              ),
+                            );
+                          },
+                        );
+
                     },
                   ),
                 ),
