@@ -1,65 +1,104 @@
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using WebApiWithRoleAuthentication.Data;
 using WebApiWithRoleAuthentication.Services.Interfaces;
+using WebApiWithRoleAuthentication.Domain;
+using System.Text.Json;
+
 
 namespace WebApiWithRoleAuthentication.Services
 {
     public class InvitationService : IInvitationService
     {
         private readonly AppDbContext _db;
+        public InvitationService(AppDbContext db) => _db = db;
 
-        public InvitationService(AppDbContext db)
-        {
-            _db = db;
-        }
-
-        // Create an invitation and return the invited user's ID
+        // ──────────────────────────────────────────────────────────────────────────
+        // Creates (or resets) a pending invitation and returns the INVITEE’s userId
+        // ──────────────────────────────────────────────────────────────────────────
         public async Task<string> CreateInviteAsync(Guid projectId, string senderId, string email)
         {
-            // Find the user by email
-            var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == email);
-            if (user == null)
-                throw new Exception("User with given email not found");
+            // 1) Find user by e-mail
+            var user = await _db.Users.SingleOrDefaultAsync(u => u.Email == email);
+            if (user == null) throw new Exception("User not found");
 
-            // Optionally, create a ProjectInvitation or similar row here if you track pending invites
+            // 2) Already a member?
+            var alreadyMember = await _db.ProjectMembers
+                .AnyAsync(m => m.ProjectId == projectId && m.UserId == user.Id);
+            if (alreadyMember) throw new Exception("User is already a project member");
 
-            // (You might add the user as a pending member, or just send a notification)
-            // For now, just return the user's Id
-            return user.Id;
-        }
+            // 3) Existing invitation?
+            var invite = await _db.ProjectInvitations
+                .SingleOrDefaultAsync(i => i.ProjectId == projectId && i.UserId == user.Id);
 
-        // Handle invite decision (accept/decline)
-        public async Task HandleDecisionAsync(Guid notificationId, string userId, bool accept)
-        {
-            // Optionally, fetch notification to validate
-
-            if (accept)
+            if (invite != null)
             {
-                // Add user as a project member if not already present
-                // (Assume you have a ProjectMembers table/entity)
+                if (invite.Status == ProjectInvitation.InvitationStatus.Pending)
+                    throw new Exception("User already invited and pending");
 
-                // Example:
-                // var notification = await _db.Notifications.FindAsync(notificationId);
-                // if (notification == null) throw new Exception("Notification not found");
-                // var projectId = ... (deserialize notification.PayloadJson)
-                // var exists = await _db.ProjectMembers.AnyAsync(m => m.ProjectId == projectId && m.UserId == userId);
-                // if (!exists)
-                // {
-                //     _db.ProjectMembers.Add(new ProjectMember { ProjectId = projectId, UserId = userId });
-                //     await _db.SaveChangesAsync();
-                // }
-
-                // For now, just simulate
-                await Task.CompletedTask;
+                // Re-invite previously rejected / accepted user
+                invite.Status     = ProjectInvitation.InvitationStatus.Pending;
+                invite.CreatedUtc = DateTime.UtcNow;
             }
             else
             {
-                // Decline: optionally set a flag, send a notification, etc.
-                await Task.CompletedTask;
+                invite = new ProjectInvitation
+                {
+                    ProjectId  = projectId,
+                    UserId     = user.Id,
+                    Status     = ProjectInvitation.InvitationStatus.Pending,
+                    CreatedUtc = DateTime.UtcNow
+                };
+                _db.ProjectInvitations.Add(invite);
             }
+
+            await _db.SaveChangesAsync();
+            return user.Id;   // ← controller uses this to build the notification
+        }
+
+        // ──────────────────────────────────────────────────────────────────────────
+        // Accept / decline a pending invite (uses userId + project lookup)
+        // ──────────────────────────────────────────────────────────────────────────
+        public async Task HandleDecisionAsync(Guid notificationId, string userId, bool accept)
+        {
+            // Find the pending invite for THIS user
+               // Get the projectId from the notification payload
+                var notif = await _db.Notifications.FindAsync(notificationId)
+                        ?? throw new Exception("Notification not found");
+                var projectId = JsonDocument.Parse(notif.PayloadJson)
+                                .RootElement.GetProperty("projectId").GetGuid();
+
+                var invite = await _db.ProjectInvitations
+                    .SingleOrDefaultAsync(i =>
+                        i.ProjectId == projectId &&
+                        i.UserId   == userId   &&
+                        i.Status   == ProjectInvitation.InvitationStatus.Pending);
+
+            if (invite == null) throw new Exception("No pending invitation found");
+
+            if (accept)
+            {
+                var isMember = await _db.ProjectMembers
+                    .AnyAsync(m => m.ProjectId == invite.ProjectId && m.UserId == userId);
+
+                if (!isMember)
+                {
+                    _db.ProjectMembers.Add(new ProjectMember
+                    {
+                        ProjectId = invite.ProjectId,
+                        UserId    = userId,
+                        Role      = ProjectRole.Member
+                    });
+                }
+                invite.Status = ProjectInvitation.InvitationStatus.Accepted;
+            }
+            else
+            {
+                invite.Status = ProjectInvitation.InvitationStatus.Rejected;
+            }
+
+            await _db.SaveChangesAsync();
         }
     }
 }

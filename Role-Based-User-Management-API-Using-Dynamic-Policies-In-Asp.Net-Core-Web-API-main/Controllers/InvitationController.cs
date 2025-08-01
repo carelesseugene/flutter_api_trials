@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 using WebApiWithRoleAuthentication.Services.Interfaces;
 using WebApiWithRoleAuthentication.Domain.Enums;
 using WebApiWithRoleAuthentication.Domain.Dtos;
@@ -16,13 +17,16 @@ public class InvitationsController : ControllerBase
 
     public InvitationsController(IInvitationService inv, INotificationService n)
     {
-        _invites = inv; _notifs = n;
+        _invites = inv;
+        _notifs = n;
     }
 
     [HttpPost] // send invite
     public async Task<IActionResult> Send(Guid projectId, [FromBody] InviteDto dto)
     {
-        var senderId = User.FindFirst("sub")!.Value;
+        // Use NameIdentifier claim (the user ID)
+        var senderId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? throw new Exception("UserId claim missing in token");
 
         var targetUserId = await _invites.CreateInviteAsync(projectId, senderId, dto.Email);
 
@@ -38,7 +42,9 @@ public class InvitationsController : ControllerBase
     [HttpPost("~/api/invitations/{notificationId:guid}/decision")]
     public async Task<IActionResult> Decide(Guid notificationId, [FromBody] DecisionDto dto)
     {
-        var userId = User.FindFirst("sub")!.Value;
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? throw new Exception("UserId claim missing in token");
+
         await _invites.HandleDecisionAsync(notificationId, userId, dto.Accept);
 
         await _notifs.MarkActionedAsync(notificationId);

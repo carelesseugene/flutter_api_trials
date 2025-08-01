@@ -67,21 +67,35 @@ class _MembersPageState extends State<MembersPage> {
     );
 
     if (ok == true && c.text.trim().isNotEmpty) {
-      try {
-        await ApiService.inviteUser(widget.projectId, c.text.trim());
-        if (mounted) {
-          ScaffoldMessenger.of(ctx)
-              .showSnackBar(const SnackBar(content: Text('Davet Gönderildi')));
-          await Future.delayed(const Duration(milliseconds: 400));
-          setState(() => _futureDetails = ApiService.getProjectDetails(widget.projectId));
-        }
-      } catch (_) {
-        if (mounted) {
-          ScaffoldMessenger.of(ctx)
-              .showSnackBar(const SnackBar(content: Text('Kullanıcı bulunamadı.')));
-        }
-      }
+  try {
+    final proj = await _futureDetails;
+    final projectName = proj?.name ?? '';
+
+    await ApiService.inviteUser(
+      widget.projectId,
+      projectName,
+      c.text.trim(),
+    );
+    if (mounted) {
+      ScaffoldMessenger.of(ctx)
+          .showSnackBar(const SnackBar(content: Text('Davet Gönderildi')));
+      await Future.delayed(const Duration(milliseconds: 400));
+      setState(() => _futureDetails = ApiService.getProjectDetails(widget.projectId));
     }
+  } catch (e) {
+    // Try to show a more useful error based on backend message
+    String msg = 'Kullanıcı bulunamadı.';
+    final es = e.toString();
+    if (es.contains('already invited')) {
+      msg = 'Bu kullanıcıya zaten bekleyen bir davet var.';
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(ctx)
+          .showSnackBar(SnackBar(content: Text(msg)));
+    }
+  }
+}
+
   }
 
   Future<void> _removeMember(BuildContext ctx, MemberDto member) async {
@@ -149,13 +163,11 @@ class _MembersPageState extends State<MembersPage> {
             return const Center(child: Text('Üye bulunamadı.'));
           }
 
-
-        final me = members.firstWhere(
+          final me = members.firstWhere(
             (m) => m.email == myEmail,
             orElse: () => members[0],
           );
           final isOwner = me.role == ProjectRole.lead;
-
 
           return Column(
             children: [
@@ -172,28 +184,27 @@ class _MembersPageState extends State<MembersPage> {
                       final member = members[i];
                       final isMe = member.email == myEmail;
                       return ListTile(
-                          leading: CircleAvatar(
-                            child: Text(member.email[0].toUpperCase()),
-                          ),
-                          title: Text(member.email),
-                          subtitle: Text(member.role.name),
-                          trailing: isOwner && !isMe
-                              ? IconButton(
-                                  icon: const Icon(Icons.remove_circle, color: Colors.red),
-                                  tooltip: 'Projeden Çıkar',
-                                  onPressed: () => _removeMember(context, member),
-                                )
-                              : null,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => PublicProfilePage(userId: member.userId),
-                              ),
-                            );
-                          },
-                        );
-
+                        leading: CircleAvatar(
+                          child: Text(member.email[0].toUpperCase()),
+                        ),
+                        title: Text(member.email),
+                        subtitle: Text(member.role.name),
+                        trailing: isOwner && !isMe
+                            ? IconButton(
+                                icon: const Icon(Icons.remove_circle, color: Colors.red),
+                                tooltip: 'Projeden Çıkar',
+                                onPressed: () => _removeMember(context, member),
+                              )
+                            : null,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => PublicProfilePage(userId: member.userId),
+                            ),
+                          );
+                        },
+                      );
                     },
                   ),
                 ),

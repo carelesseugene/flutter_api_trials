@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using WebApiWithRoleAuthentication.Data;
 using WebApiWithRoleAuthentication.Domain.Enums;
 using WebApiWithRoleAuthentication.Services.Interfaces;
@@ -25,7 +26,9 @@ public class NotificationsController : ControllerBase
                                           int page = 1,
                                           int pageSize = 30)
     {
-        var uid = User.FindFirst("sub")!.Value;
+        // SAFELY get the logged-in user's Id from the JWT claim
+        var uid = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? throw new Exception("UserId claim missing in token");
 
         var q = _db.Notifications.Where(n => n.UserId == uid);
         if (unreadOnly)
