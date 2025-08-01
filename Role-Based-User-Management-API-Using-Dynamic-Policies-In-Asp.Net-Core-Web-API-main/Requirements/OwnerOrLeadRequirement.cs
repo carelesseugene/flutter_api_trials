@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using WebApiWithRoleAuthentication.Data;
-using ProjectManagement.Domain;
+using WebApiWithRoleAuthentication.Domain;
 namespace WebApiWithRoleAuthentication.Requirements;
 public class OwnerOrLeadRequirement : IAuthorizationRequirement { }
 

@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Identity;
-namespace ProjectManagement.Domain;
+namespace WebApiWithRoleAuthentication.Domain;
 public class TaskCard
 {
     public Guid Id        { get; set; } = Guid.NewGuid();

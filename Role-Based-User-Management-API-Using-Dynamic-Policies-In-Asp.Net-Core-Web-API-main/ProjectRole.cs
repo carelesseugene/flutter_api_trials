@@ -1,4 +1,4 @@
-namespace ProjectManagement.Domain;
+namespace WebApiWithRoleAuthentication.Domain;
 public enum ProjectRole { 
     Lead=0,
 

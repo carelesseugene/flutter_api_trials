@@ -9,7 +9,8 @@ using WebApiWithRoleAuthentication.DTOs;
 using WebApiWithRoleAuthentication.Data;
 using WebApiWithRoleAuthentication.Hubs;
 using WebApiWithRoleAuthentication.Extensions;
-using ProjectManagement.Domain;
+using WebApiWithRoleAuthentication.Domain;
+using WebApiWithRoleAuthentication.Domain.Enums;
 
 
 namespace WebApiWithRoleAuthentication.Controllers;

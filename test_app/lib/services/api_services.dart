@@ -221,11 +221,17 @@ class ApiService {
   /* ==============================================================
      INVITATIONS & NOTIFICATIONS
      ============================================================== */
-  static Future<void> inviteUser(String projectId, String email) async {
-    final res = await _post('projects/$projectId/invite',
-        body: {'email': email.trim()});
-    if (res.statusCode != 200) throw Exception(res.body);
-  }
+  static Future<void> inviteUser(String projectId, String projectName, String email) async {
+  final res = await _post(
+    'projects/$projectId/invitations',          // <-- plural
+    body: {
+      'email': email.trim(),
+      'projectName': projectName,               // <-- new
+    },
+  );
+  if (res.statusCode != 200) throw Exception(res.body);
+}
+
 
   static Future<List<NotificationDto>> getNotifications() async {
     final res = await _get('notifications');
@@ -235,11 +241,10 @@ class ApiService {
     return list.map((e) => NotificationDto.fromJson(e)).toList();
   }
 
-  static Future<void> respondInvite(String projectId, bool accept) async {
-    final res = await _post(
-        'notifications/$projectId/invites/${accept ? 'accept' : 'reject'}');
-    if (res.statusCode != 204) throw Exception(res.body);
-  }
+ static Future<void> respondInvite(String notificationId, bool accept) async {
+  final res = await _post('invitations/$notificationId/decision', body: {'accept': accept});
+  if (res.statusCode != 204) throw Exception(res.body);
+}
 
   /* ==============================================================
      BOARD
@@ -324,7 +329,7 @@ static Future<void> assignUsersToCard(String projectId, String cardId, List<Stri
   if (res.statusCode != 204) throw Exception(res.body);
 }
 
-// Update card progress
+
 static Future<void> updateCardProgress(String projectId, String cardId, int progress) async {
   final res = await _patch('projects/$projectId/cards/$cardId/progress', body: {'progress': progress});
   if (res.statusCode != 204) throw Exception(res.body);

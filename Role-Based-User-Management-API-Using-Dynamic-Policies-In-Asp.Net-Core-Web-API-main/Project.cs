@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Identity;
-using ProjectManagement.Domain;
-
+using WebApiWithRoleAuthentication.Domain;
+using WebApiWithRoleAuthentication.Services.Interfaces;
+using WebApiWithRoleAuthentication.Services;
+using WebApiWithRoleAuthentication.Workers;
+using WebApiWithRoleAuthentication.Domain.Enums;
 public class Project
 {
     public Guid Id              { get; set; } = Guid.NewGuid();

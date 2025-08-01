@@ -21,13 +21,14 @@ class NotificationCtrl extends StateNotifier<List<NotificationDto>> {
     );
   }
 
-  Future<void> load() async {
-    try {
-      state = await ApiService.getNotifications();
-    } catch (_) {
-      // Optionally keep the previous state or set to []
-    }
+ Future<void> load() async {
+  try {
+    final all = await ApiService.getNotifications();
+    state = all.where((n) => n.status != NotificationStatus.actioned).toList();
+  } catch (_) {
+    // Optionally keep the previous state or set to []
   }
+}
 
   void add(NotificationDto n) => state = [n, ...state];
 

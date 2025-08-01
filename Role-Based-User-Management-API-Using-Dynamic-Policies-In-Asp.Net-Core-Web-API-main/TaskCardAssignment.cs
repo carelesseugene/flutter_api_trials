@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 
-namespace ProjectManagement.Domain;
+namespace WebApiWithRoleAuthentication.Domain;
 
 public class TaskCardAssignment
 {
